@@ -12,7 +12,6 @@ export PORT_ROOT="${PWD}"
 export PORT_TYPE="GIT"
 export CC="ibm-clang64"
 export CXX="ibm-clang++64"
-export PORT_NUM_JOBS="10"
 if [ "${PORT_INSTALL_DIR}x" = "x" ]; then
   export PORT_INSTALL_DIR="${HOME}/zot/prod/CMake"
 fi
