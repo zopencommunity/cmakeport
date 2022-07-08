@@ -15,7 +15,7 @@ export CXX="ibm-clang++64"
 if [ "${PORT_INSTALL_DIR}x" = "x" ]; then
   export PORT_INSTALL_DIR="${HOME}/zot/prod/CMake"
 fi
-export PORT_BOOTSTRAP_OPTS="--prefix=${PORT_INSTALL_DIR} --parallel=${PORT_NUM_JOBS} -- -DCMAKE_BUILD_TYPE=Release"
+export PORT_BOOTSTRAP_OPTS="--prefix=${PORT_INSTALL_DIR} -- -DCMAKE_BUILD_TYPE=Release"
 export PORT_CONFIGURE="skip"
 export PORT_CHECK="skip"
 
