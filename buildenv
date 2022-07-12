@@ -1,0 +1,24 @@
+
+#!/bin/sh
+#
+# Set up environment variables for general build tool to operate
+#
+if ! [ -f ./buildenv ]; then
+  echo "Need to source from the buildenv directory" >&2
+  return 0
+fi
+
+export ZOPEN_ROOT="${PWD}"
+export ZOPEN_TYPE="GIT"
+export CC="ibm-clang64"
+export CXX="ibm-clang++64"
+if [ "${ZOPEN_INSTALL_DIR}x" = "x" ]; then
+  export ZOPEN_INSTALL_DIR="${HOME}/zot/prod/CMake"
+fi
+export ZOPEN_BOOTSTRAP_OPTS="--prefix=${ZOPEN_INSTALL_DIR} -- -DCMAKE_BUILD_TYPE=Release"
+export ZOPEN_CONFIGURE="skip"
+export ZOPEN_CHECK="skip"
+
+export ZOPEN_GIT_URL="https://github.com/Kitware/CMake.git"
+export ZOPEN_GIT_DEPS="git make"
+export ZOPEN_GIT_TAG="v3.18.0"
