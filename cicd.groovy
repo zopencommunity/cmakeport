@@ -10,6 +10,6 @@ node('linux')
         }
 
         stage('Build') {
-                build job: 'Port-Pipeline', parameters: [string(name: 'REPO', value: 'cmakeport'), string(name: 'DESCRIPTION', value: 'CMake is used to control the software compilation process using simple platform and compiler independent configuration files, and generate native makefiles.' )]
+                build job: 'Port-Pipeline', parameters: [string(name: 'PORT_GITHUB_REPO', value: 'cmakeport'), string(name: 'PORT_DESCRIPTION', value: 'CMake is used to control the software compilation process using simple platform and compiler independent configuration files, and generate native makefiles.' )]
         }
 }
