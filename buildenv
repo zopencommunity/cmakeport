@@ -15,3 +15,9 @@ export ZOPEN_CHECK="skip"
 export ZOPEN_GIT_URL="https://github.com/Kitware/CMake.git"
 export ZOPEN_GIT_DEPS="git make"
 export ZOPEN_GIT_TAG="v3.18.0"
+
+zopen_check_results()
+{
+  return 3 # non-functional
+}
+
