@@ -5,6 +5,8 @@
 export ZOPEN_TYPE="GIT"
 export CC="ibm-clang64"
 export CXX="ibm-clang++64"
+export CFLAGS=" "
+export CXXFLAGS=" "
 if [ "${ZOPEN_INSTALL_DIR}x" = "x" ]; then
   export ZOPEN_INSTALL_DIR="${HOME}/zot/prod/CMake"
 fi
