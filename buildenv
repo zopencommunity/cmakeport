@@ -3,10 +3,10 @@
 # Set up environment variables for general build tool to operate
 #
 export ZOPEN_TYPE="GIT"
-export CC="ibm-clang64"
-export CXX="ibm-clang++64"
-export CFLAGS=" "
-export CXXFLAGS=" "
+export CC="xlclang"
+export CXX="xlclang++"
+export CFLAGS="-std=gnu11 -qnocsect"
+export CXXFLAGS="-+ -qnocsect"
 if [ "${ZOPEN_INSTALL_DIR}x" = "x" ]; then
   export ZOPEN_INSTALL_DIR="${HOME}/zot/prod/CMake"
 fi
