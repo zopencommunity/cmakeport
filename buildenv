@@ -10,7 +10,7 @@ export CXXFLAGS="-+ -qnocsect"
 if [ "${ZOPEN_INSTALL_DIR}x" = "x" ]; then
   export ZOPEN_INSTALL_DIR="${HOME}/zot/prod/CMake"
 fi
-export ZOPEN_BOOTSTRAP_OPTS="--prefix=${ZOPEN_INSTALL_DIR} -- -DCMAKE_BUILD_TYPE=Release"
+export ZOPEN_BOOTSTRAP_OPTS="--prefix=${ZOPEN_INSTALL_DIR} -- -DCMAKE_BUILD_TYPE=Debug"
 export ZOPEN_CONFIGURE="skip"
 export ZOPEN_CHECK="skip"
 
