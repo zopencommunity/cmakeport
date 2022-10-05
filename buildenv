@@ -3,14 +3,9 @@
 # Set up environment variables for general build tool to operate
 #
 export ZOPEN_TYPE="GIT"
-export CC="xlclang"
-export CXX="xlclang++"
-export CFLAGS="-std=gnu11 -qnocsect"
-export CXXFLAGS="-+ -qnocsect"
-if [ "${ZOPEN_INSTALL_DIR}x" = "x" ]; then
-  export ZOPEN_INSTALL_DIR="${HOME}/zot/prod/CMake"
-fi
-export ZOPEN_BOOTSTRAP_OPTS="--prefix=${ZOPEN_INSTALL_DIR} -- -DCMAKE_BUILD_TYPE=Debug"
+export ZOPEN_EXTRA_CXXFLAGS="-qNOASCII"
+export ZOPEN_EXTRA_CFLAGS="-qNOASCII"
+export ZOPEN_BOOTSTRAP_OPTS="--prefix=\${ZOPEN_INSTALL_DIR} -- -DCMAKE_BUILD_TYPE=None -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON"
 export ZOPEN_CONFIGURE="skip"
 export ZOPEN_CHECK="skip"
 
