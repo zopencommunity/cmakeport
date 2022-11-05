@@ -150,6 +150,34 @@ index 40668a3e6b..f04506aad2 100644
  # else /* unknown architecture */
  #  define ARCHITECTURE_ID ""
  # endif
+diff --git a/Modules/CheckTypeSize.cmake b/Modules/CheckTypeSize.cmake
+index 2b07b7cc03..036f913aed 100644
+--- a/Modules/CheckTypeSize.cmake
++++ b/Modules/CheckTypeSize.cmake
+@@ -117,6 +117,12 @@ function(__check_type_size_impl type var map builtin language)
+   endif()
+   set(bin ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CheckTypeSize/${var}.bin)
+   configure_file(${__check_type_size_dir}/CheckTypeSize.c.in ${src} @ONLY)
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    set(CMAKE_C_FLAGS_SAVE ${CMAKE_C_FLAGS})
++    set(CMAKE_CXX_FLAGS_SAVE ${CMAKE_CXX_FLAGS})
++    string(REGEX REPLACE "-(qASCII|qascii|fzos-le-char-mode=ascii);?" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
++    string(REGEX REPLACE "-(qASCII|qascii|fzos-le-char-mode=ascii);?" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
++  endif()
+   try_compile(HAVE_${var} ${CMAKE_BINARY_DIR} ${src}
+     COMPILE_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
+     LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS}
+@@ -127,6 +133,10 @@ function(__check_type_size_impl type var map builtin language)
+     OUTPUT_VARIABLE output
+     COPY_FILE ${bin}
+     )
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS_SAVE})
++    set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_SAVE})
++  endif()
+ 
+   if(HAVE_${var})
+     # The check compiled.  Load information from the binary.
 diff --git a/Modules/Compiler/Clang.cmake b/Modules/Compiler/Clang.cmake
 index bb516d3a20..7aa2129cfa 100644
 --- a/Modules/Compiler/Clang.cmake
