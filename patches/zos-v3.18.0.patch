@@ -151,29 +151,34 @@ index 40668a3e6b..f04506aad2 100644
  #  define ARCHITECTURE_ID ""
  # endif
 diff --git a/Modules/CheckTypeSize.cmake b/Modules/CheckTypeSize.cmake
-index 2b07b7cc03..036f913aed 100644
+index 2b07b7cc03..b010c9c3cb 100644
 --- a/Modules/CheckTypeSize.cmake
 +++ b/Modules/CheckTypeSize.cmake
-@@ -117,6 +117,12 @@ function(__check_type_size_impl type var map builtin language)
+@@ -117,6 +117,17 @@ function(__check_type_size_impl type var map builtin language)
    endif()
    set(bin ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CheckTypeSize/${var}.bin)
    configure_file(${__check_type_size_dir}/CheckTypeSize.c.in ${src} @ONLY)
++  
++  # Add Flag for z/OS compilers for ebcdic encoding of string literals.
 +  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    # Only need to modify CMAKE_C_FLAGS as CheckTypeSize.c.in is in C
 +    set(CMAKE_C_FLAGS_SAVE ${CMAKE_C_FLAGS})
-+    set(CMAKE_CXX_FLAGS_SAVE ${CMAKE_CXX_FLAGS})
-+    string(REGEX REPLACE "-(qASCII|qascii|fzos-le-char-mode=ascii);?" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-+    string(REGEX REPLACE "-(qASCII|qascii|fzos-le-char-mode=ascii);?" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
++    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
++      string(APPEND CMAKE_C_FLAGS " -fzos-le-char-mode=ebcdic")
++    elseif(CMAKE_C_COMPILER_ID MATCHES "zOS")
++      string(APPEND CMAKE_C_FLAGS " -qNoASCII")
++    endif()
 +  endif()
    try_compile(HAVE_${var} ${CMAKE_BINARY_DIR} ${src}
      COMPILE_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
      LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS}
-@@ -127,6 +133,10 @@ function(__check_type_size_impl type var map builtin language)
+@@ -127,6 +138,10 @@ function(__check_type_size_impl type var map builtin language)
      OUTPUT_VARIABLE output
      COPY_FILE ${bin}
      )
++  # Restore flags for z/OS compilers.
 +  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
 +    set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS_SAVE})
-+    set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_SAVE})
 +  endif()
  
    if(HAVE_${var})
