@@ -1,0 +1,2298 @@
+diff --git a/CompileFlags.cmake b/CompileFlags.cmake
+index e6fb20b500..3cd67513db 100644
+--- a/CompileFlags.cmake
++++ b/CompileFlags.cmake
+@@ -43,6 +43,11 @@ if(CMAKE_SYSTEM_NAME MATCHES "AIX")
+   endif()
+ endif()
+ 
++if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_XOPEN_SOURCE=600")
++  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_XOPEN_SOURCE=600")
++endif()
++
+ if(CMAKE_SYSTEM MATCHES "OSF1-V")
+   if(NOT CMAKE_COMPILER_IS_GNUCXX)
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -timplicit_local -no_implicit_include ")
+diff --git a/Modules/CMakeDetermineCCompiler.cmake b/Modules/CMakeDetermineCCompiler.cmake
+index f5298dff46..0774f9c61d 100644
+--- a/Modules/CMakeDetermineCCompiler.cmake
++++ b/Modules/CMakeDetermineCCompiler.cmake
+@@ -178,7 +178,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+ 
+     # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
+     # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
+-    if ("${_CMAKE_TOOLCHAIN_PREFIX}" MATCHES "(.+-)?llvm-$")
++    # remove "ibm-" prefix for the same reason above.
++    if ("${_CMAKE_TOOLCHAIN_PREFIX}" MATCHES "(.+-)?(llvm|ibm)-$")
+       set(_CMAKE_TOOLCHAIN_PREFIX ${CMAKE_MATCH_1})
+     endif ()
+   elseif(CMAKE_C_COMPILER_ID MATCHES "TI")
+diff --git a/Modules/CMakeDetermineCXXCompiler.cmake b/Modules/CMakeDetermineCXXCompiler.cmake
+index fd3d028be2..6f2b5ccbe9 100644
+--- a/Modules/CMakeDetermineCXXCompiler.cmake
++++ b/Modules/CMakeDetermineCXXCompiler.cmake
+@@ -177,7 +177,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+ 
+     # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
+     # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
+-    if ("${_CMAKE_TOOLCHAIN_PREFIX}" MATCHES "(.+-)?llvm-$")
++    # remove "ibm-" prefix for the same reason above.
++    if ("${_CMAKE_TOOLCHAIN_PREFIX}" MATCHES "(.+-)?(llvm|ibm)-$")
+       set(_CMAKE_TOOLCHAIN_PREFIX ${CMAKE_MATCH_1})
+     endif ()
+   elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "TI")
+diff --git a/Modules/CMakeDetermineCompilerABI.cmake b/Modules/CMakeDetermineCompilerABI.cmake
+index 82a6d21a41..0a281f3357 100644
+--- a/Modules/CMakeDetermineCompilerABI.cmake
++++ b/Modules/CMakeDetermineCompilerABI.cmake
+@@ -39,6 +39,16 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
+       # from which we might detect implicit link libraries.
+       list(APPEND CMAKE_FLAGS "-DCMAKE_${lang}_STANDARD_LIBRARIES=")
+     endif()
++
++    # Add Flag for z/OS compilers for ebcdic encoding of string literals.
++    if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++      if(CMAKE_${lang}_COMPILER_ID MATCHES "Clang")
++        string(APPEND COMPILE_DEFINITIONS " -fzos-le-char-mode=ebcdic")
++      elseif(CMAKE_${lang}_COMPILER_ID MATCHES "zOS")
++        string(APPEND COMPILE_DEFINITIONS " -qNoASCII")
++      endif()
++    endif()
++
+     __TestCompiler_setTryCompileTargetType()
+ 
+     # Avoid failing ABI detection on warnings.
+diff --git a/Modules/CMakeDetermineCompilerId.cmake b/Modules/CMakeDetermineCompilerId.cmake
+index 2b19736d47..1f4f42b67e 100644
+--- a/Modules/CMakeDetermineCompilerId.cmake
++++ b/Modules/CMakeDetermineCompilerId.cmake
+@@ -32,6 +32,11 @@ function(CMAKE_DETERMINE_COMPILER_ID lang flagvar src)
+   endif()
+   string(REPLACE " " ";" CMAKE_${lang}_COMPILER_ID_FLAGS_LIST "${CMAKE_${lang}_COMPILER_ID_FLAGS}")
+ 
++  # Drop qASCII Flag for z/OS for correct encoding of string literals.
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    string(REGEX REPLACE "-(qASCII|qascii|fzos-le-char-mode=ascii);?" "" CMAKE_${lang}_COMPILER_ID_FLAGS_LIST "${CMAKE_${lang}_COMPILER_ID_FLAGS_LIST}")
++  endif()
++
+   # Compute the directory in which to run the test.
+   set(CMAKE_${lang}_COMPILER_ID_DIR ${CMAKE_PLATFORM_INFO_DIR}/CompilerId${lang})
+ 
+diff --git a/Modules/CMakeDetermineSystem.cmake b/Modules/CMakeDetermineSystem.cmake
+index 2c2c2ac371..1391f2a7f5 100644
+--- a/Modules/CMakeDetermineSystem.cmake
++++ b/Modules/CMakeDetermineSystem.cmake
+@@ -29,7 +29,7 @@
+ # cygwin                        CYGWIN_NT-5.1
+ # MSYS                          MSYS_NT-6.1
+ # MacOSX                        Darwin
+-
++# z/OS                          OS/390
+ 
+ # find out on which system cmake runs
+ if(CMAKE_HOST_UNIX)
+@@ -44,7 +44,7 @@ if(CMAKE_HOST_UNIX)
+     else()
+       exec_program(${CMAKE_UNAME} ARGS -r OUTPUT_VARIABLE CMAKE_HOST_SYSTEM_VERSION)
+     endif()
+-    if(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux|CYGWIN.*|MSYS.*|^GNU$|Android")
++    if(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux|CYGWIN.*|MSYS.*|^GNU$|Android|OS/390")
+       exec_program(${CMAKE_UNAME} ARGS -m OUTPUT_VARIABLE CMAKE_HOST_SYSTEM_PROCESSOR
+         RETURN_VALUE val)
+     elseif(CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
+diff --git a/Modules/CMakeFindBinUtils.cmake b/Modules/CMakeFindBinUtils.cmake
+index a6bd0d192d..5470fe0ca8 100644
+--- a/Modules/CMakeFindBinUtils.cmake
++++ b/Modules/CMakeFindBinUtils.cmake
+@@ -167,7 +167,7 @@ else()
+   set(_CMAKE_ADDR2LINE_NAMES "addr2line")
+ 
+   # Prepend toolchain-specific names.
+-  if("${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_COMPILER_ID}" STREQUAL Clang)
++  if("${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_COMPILER_ID}" STREQUAL Clang AND NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
+     if("x${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_SIMULATE_ID}" STREQUAL "xMSVC")
+       list(PREPEND _CMAKE_LINKER_NAMES "lld-link")
+     else()
+diff --git a/Modules/CMakePlatformId.h.in b/Modules/CMakePlatformId.h.in
+index 06f5ecd23c..d9d97bb4cc 100644
+--- a/Modules/CMakePlatformId.h.in
++++ b/Modules/CMakePlatformId.h.in
+@@ -35,6 +35,9 @@
+ #elif defined(_AIX) || defined(__AIX) || defined(__AIX__) || defined(__aix) || defined(__aix__)
+ # define PLATFORM_ID "AIX"
+ 
++#elif defined(__MVS__)
++# define PLATFORM_ID "zOS"
++
+ #elif defined(__hpux) || defined(__hpux__)
+ # define PLATFORM_ID "HP-UX"
+ 
+@@ -195,6 +198,9 @@
+ # elif defined(__ICCSTM8__)
+ #  define ARCHITECTURE_ID "STM8"
+ 
++# elif defined(__MVS__) && defined(__ARCH__)
++#  define ARCHITECTURE_ID "ARCH" STRINGIFY(__ARCH__)
++
+ # else /* unknown architecture */
+ #  define ARCHITECTURE_ID ""
+ # endif
+diff --git a/Modules/CheckTypeSize.cmake b/Modules/CheckTypeSize.cmake
+index 602170c14f..bcc82ae59b 100644
+--- a/Modules/CheckTypeSize.cmake
++++ b/Modules/CheckTypeSize.cmake
+@@ -143,6 +143,17 @@ function(__check_type_size_impl type var map builtin language)
+   # Perform the check.
+   set(bin ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CheckTypeSize/${var}.bin)
+   configure_file(${__check_type_size_dir}/CheckTypeSize.c.in ${src} @ONLY)
++
++  # Add Flag for z/OS compilers for ebcdic encoding of string literals.
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    # Only need to modify CMAKE_C_FLAGS as CheckTypeSize.c.in is in C
++    set(CMAKE_C_FLAGS_SAVE ${CMAKE_C_FLAGS})
++    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
++      string(APPEND CMAKE_C_FLAGS " -fzos-le-char-mode=ebcdic")
++    elseif(CMAKE_C_COMPILER_ID MATCHES "zOS")
++      string(APPEND CMAKE_C_FLAGS " -qNoASCII")
++    endif()
++  endif()
+   try_compile(HAVE_${var} ${CMAKE_BINARY_DIR} ${src}
+     COMPILE_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
+     LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS}
+@@ -153,6 +164,10 @@ function(__check_type_size_impl type var map builtin language)
+     OUTPUT_VARIABLE output
+     COPY_FILE ${bin}
+     )
++  # Restore flags for z/OS compilers.
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS_SAVE})
++  endif()
+ 
+   if(HAVE_${var})
+     # The check compiled.  Load information from the binary.
+diff --git a/Modules/Compiler/Clang.cmake b/Modules/Compiler/Clang.cmake
+index df115d3aac..bc0c1f91c4 100644
+--- a/Modules/Compiler/Clang.cmake
++++ b/Modules/Compiler/Clang.cmake
+@@ -52,8 +52,13 @@ else()
+       endif()
+     endif()
+ 
+-    set(_CMAKE_${lang}_IPO_SUPPORTED_BY_CMAKE YES)
+-    set(_CMAKE_${lang}_IPO_MAY_BE_SUPPORTED_BY_COMPILER YES)
++    if(ZOS)
++      set(_CMAKE_${lang}_IPO_SUPPORTED_BY_CMAKE NO)
++      set(_CMAKE_${lang}_IPO_MAY_BE_SUPPORTED_BY_COMPILER NO)
++    else()
++      set(_CMAKE_${lang}_IPO_SUPPORTED_BY_CMAKE YES)
++      set(_CMAKE_${lang}_IPO_MAY_BE_SUPPORTED_BY_COMPILER YES)
++    endif()
+ 
+     string(COMPARE EQUAL "${CMAKE_${lang}_COMPILER_ID}" "AppleClang" __is_apple_clang)
+     string(COMPARE EQUAL "${CMAKE_${lang}_COMPILER_ID}" "FujitsuClang" __is_fujitsu_clang)
+diff --git a/Modules/Compiler/IBMClang-CXX.cmake b/Modules/Compiler/IBMClang-CXX.cmake
+index 5431b17e20..16ba6e65f7 100644
+--- a/Modules/Compiler/IBMClang-CXX.cmake
++++ b/Modules/Compiler/IBMClang-CXX.cmake
+@@ -26,14 +26,19 @@ set(CMAKE_CXX14_STANDARD__HAS_FULL_SUPPORT ON)
+ set(CMAKE_CXX14_STANDARD_COMPILE_OPTION "-std=c++14")
+ set(CMAKE_CXX14_EXTENSION_COMPILE_OPTION "-std=gnu++14")
+ 
+-if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17.1.0)
++if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17.1.0 OR
++    (CMAKE_SYSTEM_NAME STREQUAL "OS390" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 1.1.0))
+   set(CMAKE_CXX17_STANDARD_COMPILE_OPTION  "-std=c++17")
+   set(CMAKE_CXX17_EXTENSION_COMPILE_OPTION "-std=gnu++17")
+   set(CMAKE_CXX20_STANDARD_COMPILE_OPTION  "-std=c++20")
+   set(CMAKE_CXX20_EXTENSION_COMPILE_OPTION "-std=gnu++20")
+ endif()
+ 
+-__compiler_check_default_language_standard(CXX 17.1.0 17)
++if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
++  __compiler_check_default_language_standard(CXX 1.1.0 14)
++else()
++  __compiler_check_default_language_standard(CXX 17.1.0 17)
++endif()
+ 
+ set(CMAKE_CXX_COMPILE_OBJECT
+   "<CMAKE_CXX_COMPILER> -x c++ <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>")
+diff --git a/Modules/Compiler/zOS-C.cmake b/Modules/Compiler/zOS-C.cmake
+new file mode 100644
+index 0000000000..73928346d2
+--- /dev/null
++++ b/Modules/Compiler/zOS-C.cmake
+@@ -0,0 +1,7 @@
++include(Compiler/zOS)
++__compiler_zos(C)
++set(CMAKE_C_FLAGS_RELEASE_INIT "${CMAKE_C_FLAGS_RELEASE_INIT} -DNDEBUG")
++set(CMAKE_C_FLAGS_MINSIZEREL_INIT "${CMAKE_C_FLAGS_MINSIZEREL_INIT} -DNDEBUG")
++
++# Raise severity of include file checks from warning to error for C.
++set(CMAKE_PLATFORM_CHECK_INCLUDE_C_FLAGS "-qseverity=e=ccn3296")
+diff --git a/Modules/Compiler/zOS-CXX.cmake b/Modules/Compiler/zOS-CXX.cmake
+new file mode 100644
+index 0000000000..de82177f25
+--- /dev/null
++++ b/Modules/Compiler/zOS-CXX.cmake
+@@ -0,0 +1,39 @@
++include(Compiler/zOS)
++__compiler_zos(CXX)
++set(CMAKE_CXX_FLAGS_RELEASE_INIT "${CMAKE_CXX_FLAGS_RELEASE_INIT} -DNDEBUG")
++set(CMAKE_CXX_FLAGS_MINSIZEREL_INIT "${CMAKE_CXX_FLAGS_MINSIZEREL_INIT} -DNDEBUG")
++
++if(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 2.3.1)
++  set(CMAKE_CXX98_STANDARD__HAS_FULL_SUPPORT ON)
++  set(CMAKE_CXX98_STANDARD_COMPILE_OPTION "-std=c++98")
++  set(CMAKE_CXX98_EXTENSION_COMPILE_OPTION "-std=gnu++98")
++
++  set(CMAKE_CXX11_STANDARD__HAS_FULL_SUPPORT ON)
++  set(CMAKE_CXX11_STANDARD_COMPILE_OPTION "-std=c++11")
++  set(CMAKE_CXX11_EXTENSION_COMPILE_OPTION "-std=gnu++11")
++
++  set(CMAKE_CXX14_STANDARD__HAS_FULL_SUPPORT ON)
++  set(CMAKE_CXX14_STANDARD_COMPILE_OPTION "-std=c++14")
++  set(CMAKE_CXX14_EXTENSION_COMPILE_OPTION "-std=gnu++14")
++endif()
++
++macro(cmake_record_cxx_compile_features)
++  list(APPEND CMAKE_CXX_COMPILE_FEATURES
++    cxx_std_98
++    cxx_std_11
++    cxx_std_14
++    )
++  _record_compiler_features(CXX "" CMAKE_CXX_COMPILE_FEATURES)
++endmacro()
++
++if(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 2.3.1)
++  if (NOT CMAKE_CXX_COMPILER_FORCED)
++    if (NOT CMAKE_CXX_STANDARD_COMPUTED_DEFAULT)
++      message(FATAL_ERROR "CMAKE_CXX_STANDARD_COMPUTED_DEFAULT should be set for ${CMAKE_CXX_COMPILER_ID} (${CMAKE_CXX_COMPILER}) version ${CMAKE_CXX_COMPILER_VERSION}")
++    endif()
++    set(CMAKE_CXX_STANDARD_DEFAULT ${CMAKE_CXX_STANDARD_COMPUTED_DEFAULT})
++  elseif(NOT DEFINED CMAKE_CXX_STANDARD_DEFAULT)
++    # Compiler id was forced so just guess the default standard level.
++    set(CMAKE_CXX_STANDARD_DEFAULT 98)
++  endif()
++endif()
+diff --git a/Modules/Compiler/zOS.cmake b/Modules/Compiler/zOS.cmake
+new file mode 100644
+index 0000000000..4a59c33f60
+--- /dev/null
++++ b/Modules/Compiler/zOS.cmake
+@@ -0,0 +1,33 @@
++
++#=============================================================================
++# Copyright 2002-2011 Kitware, Inc.
++#
++# Distributed under the OSI-approved BSD License (the "License");
++# see accompanying file Copyright.txt for details.
++#
++# This software is distributed WITHOUT ANY WARRANTY; without even the
++# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++# See the License for more information.
++#=============================================================================
++# (To distribute this file outside of CMake, substitute the full
++#  License text for the above reference.)
++
++# This module is shared by multiple languages; use include blocker.
++if(__COMPILER_ZOS)
++  return()
++endif()
++set(__COMPILER_ZOS 1)
++
++macro(__compiler_zos lang)
++  # Feature flags.
++  set(CMAKE_${lang}_VERBOSE_FLAG "-V")
++
++  # Initial configuration flags.
++  set(CMAKE_${lang}_FLAGS_INIT "")
++  set(CMAKE_${lang}_FLAGS_DEBUG_INIT "-qdebug")
++  set(CMAKE_${lang}_FLAGS_MINSIZEREL_INIT "-O -DNDEBUG")
++  set(CMAKE_${lang}_FLAGS_RELEASE_INIT "-O3 -DNDEBUG")
++  set(CMAKE_${lang}_FLAGS_RELWITHDEBINFO_INIT "-O2 -qdebug -DNDEBUG")
++
++  set(CMAKE_DEPFILE_FLAGS_${lang} "-MF <DEPFILE> -qmakedep=gcc")
++endmacro()
+diff --git a/Modules/FindThreads.cmake b/Modules/FindThreads.cmake
+index a675fd6755..6165e1bd55 100644
+--- a/Modules/FindThreads.cmake
++++ b/Modules/FindThreads.cmake
+@@ -68,6 +68,10 @@ endif()
+ 
+ # simple pthread test code
+ set(PTHREAD_C_CXX_TEST_SOURCE [====[
++#ifdef __MVS__
++#define _UNIX03_THREADS
++#include <stddef.h>
++#endif
+ #include <pthread.h>
+ 
+ static void* test_func(void* data)
+diff --git a/Modules/GenerateExportHeader.cmake b/Modules/GenerateExportHeader.cmake
+index 7461a3e5d0..cada22c8d3 100644
+--- a/Modules/GenerateExportHeader.cmake
++++ b/Modules/GenerateExportHeader.cmake
+@@ -305,6 +305,8 @@ macro(_DO_SET_MACRO_VALUES TARGET_LIBRARY)
+     if(WIN32 OR CYGWIN)
+       set(DEFINE_EXPORT "__declspec(dllexport)")
+       set(DEFINE_IMPORT "__declspec(dllimport)")
++    elseif(ZOS)
++      set(DEFINE_EXPORT "_Export")
+     elseif(COMPILER_HAS_HIDDEN_VISIBILITY)
+       set(DEFINE_EXPORT "__attribute__((visibility(\"default\")))")
+       set(DEFINE_IMPORT "__attribute__((visibility(\"default\")))")
+diff --git a/Modules/Platform/OS390.cmake b/Modules/Platform/OS390.cmake
+new file mode 100644
+index 0000000000..1773726a86
+--- /dev/null
++++ b/Modules/Platform/OS390.cmake
+@@ -0,0 +1,37 @@
++set(OS390 1)
++set(ZOS 1)
++
++set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
++set(CMAKE_STATIC_LIBRARY_SUFFIX ".a")
++set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
++set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
++set(CMAKE_LINK_LIBRARY_SUFFIX "")
++set(CMAKE_IMPORT_LIBRARY_PREFIX "lib")
++set(CMAKE_IMPORT_LIBRARY_SUFFIX ".x")
++set(CMAKE_EXECUTABLE_SUFFIX "")
++set(CMAKE_DL_LIBS "")
++
++set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
++set(CMAKE_FIND_LIBRARY_SUFFIXES ".x" ".a")
++
++set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
++
++if(CMAKE_C_COMPILER_ID MATCHES "Clang")
++  set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS "-shared")
++elseif(CMAKE_C_COMPILER_ID MATCHES "zOS")
++  set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS "-Wl,DLL")
++endif()
++
++set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
++
++# z/OS archiver (ar) cannot archive two file names with the same name
++# as part of the same archive command. We must make sure the
++# object file names are distinct.
++set(CMAKE_MANGLE_OBJECT_FILE_NAMES "ON")
++
++include(Platform/UnixPaths)
++
++# Allow options and operands to be interspersed for c89/cc/c++ utilities.
++set(_CC_CCMODE ON)
++set(_CXX_CCMODE ON)
++set(_C89_CCMODE ON)
+diff --git a/Modules/TestEndianess.c.in b/Modules/TestEndianess.c.in
+index c924f7858a..78b5b8efdf 100644
+--- a/Modules/TestEndianess.c.in
++++ b/Modules/TestEndianess.c.in
+@@ -3,11 +3,19 @@ typedef @CMAKE_16BIT_TYPE@ cmakeint16;
+ 
+ /* On a little endian machine, these 16bit ints will give "THIS IS LITTLE ENDIAN."
+    On a big endian machine the characters will be exchanged pairwise. */
++#ifdef __MVS__
++const cmakeint16 info_little[] =  {0xc8e3, 0xe2c9, 0xc940, 0x40e2, 0xc9d3, 0xe3e3, 0xc5d3, 0xc540, 0xc4d5, 0xc1c9, 0x4bd5, 0x0000};
++#else
+ const cmakeint16 info_little[] =  {0x4854, 0x5349, 0x4920, 0x2053, 0x494c, 0x5454, 0x454c, 0x4520, 0x444e, 0x4149, 0x2e4e, 0x0000};
++#endif
+ 
+ /* on a big endian machine, these 16bit ints will give "THIS IS BIG ENDIAN."
+    On a little endian machine the characters will be exchanged pairwise. */
++#ifdef __MVS__
++const cmakeint16 info_big[] =     {0xe3c8, 0xc9e2, 0x40c9, 0xe240, 0xc2c9, 0xc740, 0xc5d5, 0xc4c9, 0xc1d5, 0x4b4b, 0x0000};
++#else
+ const cmakeint16 info_big[] =     {0x5448, 0x4953, 0x2049, 0x5320, 0x4249, 0x4720, 0x454e, 0x4449, 0x414e, 0x2e2e, 0x0000};
++#endif
+ 
+ #ifdef __CLASSIC_C__
+ int main(argc, argv) int argc; char *argv[];
+diff --git a/README.rst b/README.rst
+index 64e2353dd2..93f0946745 100644
+--- a/README.rst
++++ b/README.rst
+@@ -39,6 +39,7 @@ Supported Platforms
+ * OpenBSD
+ * Solaris
+ * AIX
++* z/OS
+ 
+ Other UNIX-like operating systems may work too out of the box, if not
+ it should not be a major problem to port CMake to this platform.
+diff --git a/Source/CMakeVersion.cmake b/Source/CMakeVersion.cmake
+index 2d5e295f0d..4245946966 100644
+--- a/Source/CMakeVersion.cmake
++++ b/Source/CMakeVersion.cmake
+@@ -80,5 +80,9 @@ else()
+   set(CMake_VERSION_SUFFIX "")
+ endif()
+ if(CMake_VERSION_IS_DIRTY)
+-  set(CMake_VERSION ${CMake_VERSION}-dirty)
++  if(CMAKE_SYSTEM_NAME STREQUAL "OS390")
++    set(CMake_VERSION ${CMake_VERSION}-zos)
++  else()
++    set(CMake_VERSION ${CMake_VERSION}-dirty)
++  endif()
+ endif()
+diff --git a/Source/CursesDialog/form/form.h b/Source/CursesDialog/form/form.h
+index 39ed75a7c2..92cc3e8194 100644
+--- a/Source/CursesDialog/form/form.h
++++ b/Source/CursesDialog/form/form.h
+@@ -50,7 +50,17 @@
+ #    define _XOPEN_SOURCE_EXTENDED
+ #   endif
+ #  endif
++#  if defined(__MVS__)
++#   include <stdbool.h>
++#   define __bool_
++#  endif
++#  if defined(__MVS__) && defined(__cplusplus)
++extern "C" {
++#  endif
+ #  include <curses.h>
++#  if defined(__MVS__) && defined(__cplusplus)
++}
++#  endif
+ #  if defined(__hpux) && !defined(HAVE__XOPEN_SOURCE_EXTENDED)
+ #   undef _XOPEN_SOURCE_EXTENDED
+ #  endif
+diff --git a/Source/CursesDialog/form/frm_driver.c b/Source/CursesDialog/form/frm_driver.c
+index 9cbb12ff98..d8e1c3572b 100644
+--- a/Source/CursesDialog/form/frm_driver.c
++++ b/Source/CursesDialog/form/frm_driver.c
+@@ -865,7 +865,7 @@ static int Display_Or_Erase_Field(FIELD * field, bool bEraseFlag)
+         Set_Field_Window_Attributes(field,win);
+       else
+         {
+-#if defined(__LSB_VERSION__)
++#if defined(__LSB_VERSION__) || defined(__MVS__)
+         /* getattrs() would be handy, but it is not part of LSB 4.0 */
+         attr_t fwinAttrs;
+         short  fwinPair;
+diff --git a/Source/LexerParser/cmCommandArgumentLexer.cxx b/Source/LexerParser/cmCommandArgumentLexer.cxx
+index 4b7eb79818..5ee310db27 100644
+--- a/Source/LexerParser/cmCommandArgumentLexer.cxx
++++ b/Source/LexerParser/cmCommandArgumentLexer.cxx
+@@ -318,7 +318,12 @@ typedef unsigned int flex_uint32_t;
+ /* Promotes a possibly negative, possibly signed char to an
+  *   integer in range [0..255] for use as an array index.
+  */
++#ifdef __MVS__
++#include "ebcdic.h"
++#define YY_SC_TO_UI(c) os_toascii[((YY_CHAR) (c))]
++#else
+ #define YY_SC_TO_UI(c) ((YY_CHAR) (c))
++#endif
+ 
+ /* An opaque pointer. */
+ #ifndef YY_TYPEDEF_YY_SCANNER_T
+diff --git a/Source/LexerParser/cmCommandArgumentParser.cxx b/Source/LexerParser/cmCommandArgumentParser.cxx
+index 4c49e0f9f9..2acd78241d 100644
+--- a/Source/LexerParser/cmCommandArgumentParser.cxx
++++ b/Source/LexerParser/cmCommandArgumentParser.cxx
+@@ -534,10 +534,18 @@ union yyalloc
+ 
+ /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
+    as returned by yylex, with out-of-bounds checking.  */
++#ifdef __MVS__
++#include "ebcdic.h"
++#define YYTRANSLATE(YYX)                                                \
++ (0 <= (YYX) && (YYX) <= YYMAXUTOK ?                                    \
++ ((YYX) < 256 ? YY_CAST (yysymbol_kind_t, yytranslate[os_toascii[YYX]]) \
++ : YY_CAST (yysymbol_kind_t, yytranslate[YYX])) : YYSYMBOL_YYUNDEF)
++#else
+ #define YYTRANSLATE(YYX)                                \
+   (0 <= (YYX) && (YYX) <= YYMAXUTOK                     \
+    ? YY_CAST (yysymbol_kind_t, yytranslate[YYX])        \
+    : YYSYMBOL_YYUNDEF)
++#endif
+ 
+ /* YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to TOKEN-NUM
+    as returned by yylex.  */
+diff --git a/Source/LexerParser/cmDependsJavaLexer.cxx b/Source/LexerParser/cmDependsJavaLexer.cxx
+index bfe7e64f0c..c62f323028 100644
+--- a/Source/LexerParser/cmDependsJavaLexer.cxx
++++ b/Source/LexerParser/cmDependsJavaLexer.cxx
+@@ -318,7 +318,12 @@ typedef unsigned int flex_uint32_t;
+ /* Promotes a possibly negative, possibly signed char to an
+  *   integer in range [0..255] for use as an array index.
+  */
++#ifdef __MVS__
++#include "ebcdic.h"
++#define YY_SC_TO_UI(c) os_toascii[((YY_CHAR) (c))]
++#else
+ #define YY_SC_TO_UI(c) ((YY_CHAR) (c))
++#endif
+ 
+ /* An opaque pointer. */
+ #ifndef YY_TYPEDEF_YY_SCANNER_T
+diff --git a/Source/LexerParser/cmDependsJavaParser.cxx b/Source/LexerParser/cmDependsJavaParser.cxx
+index 59cf1be3dd..7964a2633c 100644
+--- a/Source/LexerParser/cmDependsJavaParser.cxx
++++ b/Source/LexerParser/cmDependsJavaParser.cxx
+@@ -762,10 +762,18 @@ union yyalloc
+ 
+ /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
+    as returned by yylex, with out-of-bounds checking.  */
++#ifdef __MVS__
++#include "ebcdic.h"
++#define YYTRANSLATE(YYX)                                                \
++ (0 <= (YYX) && (YYX) <= YYMAXUTOK ?                                    \
++ ((YYX) < 256 ? YY_CAST (yysymbol_kind_t, yytranslate[os_toascii[YYX]]) \
++ : YY_CAST (yysymbol_kind_t, yytranslate[YYX])) : YYSYMBOL_YYUNDEF)
++#else
+ #define YYTRANSLATE(YYX)                                \
+   (0 <= (YYX) && (YYX) <= YYMAXUTOK                     \
+    ? YY_CAST (yysymbol_kind_t, yytranslate[YYX])        \
+    : YYSYMBOL_YYUNDEF)
++#endif
+ 
+ /* YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to TOKEN-NUM
+    as returned by yylex.  */
+diff --git a/Source/LexerParser/cmExprLexer.cxx b/Source/LexerParser/cmExprLexer.cxx
+index 5a76590a1a..467f7e30a7 100644
+--- a/Source/LexerParser/cmExprLexer.cxx
++++ b/Source/LexerParser/cmExprLexer.cxx
+@@ -318,7 +318,12 @@ typedef unsigned int flex_uint32_t;
+ /* Promotes a possibly negative, possibly signed char to an
+  *   integer in range [0..255] for use as an array index.
+  */
++#ifdef __MVS__
++#include "ebcdic.h"
++#define YY_SC_TO_UI(c) os_toascii[((YY_CHAR) (c))]
++#else
+ #define YY_SC_TO_UI(c) ((YY_CHAR) (c))
++#endif
+ 
+ /* An opaque pointer. */
+ #ifndef YY_TYPEDEF_YY_SCANNER_T
+diff --git a/Source/LexerParser/cmExprParser.cxx b/Source/LexerParser/cmExprParser.cxx
+index cb5e498be8..324b817dc0 100644
+--- a/Source/LexerParser/cmExprParser.cxx
++++ b/Source/LexerParser/cmExprParser.cxx
+@@ -526,10 +526,18 @@ union yyalloc
+ 
+ /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
+    as returned by yylex, with out-of-bounds checking.  */
++#ifdef __MVS__
++#include "ebcdic.h"
++#define YYTRANSLATE(YYX)                                                \
++ (0 <= (YYX) && (YYX) <= YYMAXUTOK ?                                    \
++ ((YYX) < 256 ? YY_CAST (yysymbol_kind_t, yytranslate[os_toascii[YYX]]) \
++ : YY_CAST (yysymbol_kind_t, yytranslate[YYX])) : YYSYMBOL_YYUNDEF)
++#else
+ #define YYTRANSLATE(YYX)                                \
+   (0 <= (YYX) && (YYX) <= YYMAXUTOK                     \
+    ? YY_CAST (yysymbol_kind_t, yytranslate[YYX])        \
+    : YYSYMBOL_YYUNDEF)
++#endif
+ 
+ /* YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to TOKEN-NUM
+    as returned by yylex.  */
+diff --git a/Source/LexerParser/cmListFileLexer.c b/Source/LexerParser/cmListFileLexer.c
+index ec7424c4f9..916f7e8ae3 100644
+--- a/Source/LexerParser/cmListFileLexer.c
++++ b/Source/LexerParser/cmListFileLexer.c
+@@ -1,3 +1,9 @@
++#ifdef __MVS__
++#define _OPEN_SYS_FILE_EXT 1
++#include <fcntl.h>
++#include <sys/stat.h>
++#endif
++
+ #include "cmStandardLexer.h"
+ 
+ #define FLEXINT_H 1
+@@ -318,7 +324,12 @@ typedef unsigned int flex_uint32_t;
+ /* Promotes a possibly negative, possibly signed char to an
+  *   integer in range [0..255] for use as an array index.
+  */
++#ifdef __MVS__
++#include "ebcdic.h"
++#define YY_SC_TO_UI(c) os_toascii[((YY_CHAR) (c))]
++#else
+ #define YY_SC_TO_UI(c) ((YY_CHAR) (c))
++#endif
+ 
+ /* An opaque pointer. */
+ #ifndef YY_TYPEDEF_YY_SCANNER_T
+@@ -2749,6 +2760,23 @@ int cmListFileLexer_SetFileName(cmListFileLexer* lexer, const char* name,
+     wchar_t* wname = cmsysEncoding_DupToWide(name);
+     lexer->file = _wfopen(wname, L"rb");
+     free(wname);
++#elif defined(__MVS__)
++    FILE* f = fopen(name, "rb");
++    int fd = fileno(f);
++    struct f_cnvrt query = {
++      QUERYCVT, // cvtcmd
++      0,        // pccsid
++      0,        // fccsid
++    };
++    if (fcntl(fd, F_CONTROL_CVT, &query) == -1)
++      result = 0;
++    if (query.cvtcmd == SETCVTOFF && query.pccsid != query.fccsid &&
++        query.fccsid == 819) {
++      query.cvtcmd = SETCVTON;
++      if (fcntl(fd, F_CONTROL_CVT, &query) == -1)
++        result = 0;
++    }
++    lexer->file = f;
+ #else
+     lexer->file = fopen(name, "rb");
+ #endif
+diff --git a/Source/LexerParser/ebcdic.h b/Source/LexerParser/ebcdic.h
+new file mode 100644
+index 0000000000..5a06dfad36
+--- /dev/null
++++ b/Source/LexerParser/ebcdic.h
+@@ -0,0 +1,82 @@
++#pragma once
++
++/*
++This code does basic character mapping for IBM's TPF and OS/390 operating systems.
++It is a modified version of the BS2000 table.
++
++Bijective EBCDIC (character set IBM-1047) to US-ASCII table:
++This table is bijective - there are no ambigous or duplicate characters.
++*/
++const unsigned char os_toascii[256] = {
++    0x00, 0x01, 0x02, 0x03, 0x85, 0x09, 0x86, 0x7f, /* 00-0f:           */
++    0x87, 0x8d, 0x8e, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, /* ................ */
++    0x10, 0x11, 0x12, 0x13, 0x8f, 0x0a, 0x08, 0x97, /* 10-1f:           */
++    0x18, 0x19, 0x9c, 0x9d, 0x1c, 0x1d, 0x1e, 0x1f, /* ................ */
++    0x80, 0x81, 0x82, 0x83, 0x84, 0x92, 0x17, 0x1b, /* 20-2f:           */
++    0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x05, 0x06, 0x07, /* ................ */
++    0x90, 0x91, 0x16, 0x93, 0x94, 0x95, 0x96, 0x04, /* 30-3f:           */
++    0x98, 0x99, 0x9a, 0x9b, 0x14, 0x15, 0x9e, 0x1a, /* ................ */
++    0x20, 0xa0, 0xe2, 0xe4, 0xe0, 0xe1, 0xe3, 0xe5, /* 40-4f:           */
++    0xe7, 0xf1, 0xa2, 0x2e, 0x3c, 0x28, 0x2b, 0x7c, /*  ...........<(+| */
++    0x26, 0xe9, 0xea, 0xeb, 0xe8, 0xed, 0xee, 0xef, /* 50-5f:           */
++    0xec, 0xdf, 0x21, 0x24, 0x2a, 0x29, 0x3b, 0x5e, /* &.........!$*);^ */
++    0x2d, 0x2f, 0xc2, 0xc4, 0xc0, 0xc1, 0xc3, 0xc5, /* 60-6f:           */
++    0xc7, 0xd1, 0xa6, 0x2c, 0x25, 0x5f, 0x3e, 0x3f, /* -/.........,%_>? */
++    0xf8, 0xc9, 0xca, 0xcb, 0xc8, 0xcd, 0xce, 0xcf, /* 70-7f:           */
++    0xcc, 0x60, 0x3a, 0x23, 0x40, 0x27, 0x3d, 0x22, /* .........`:#@'=" */
++    0xd8, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, /* 80-8f:           */
++    0x68, 0x69, 0xab, 0xbb, 0xf0, 0xfd, 0xfe, 0xb1, /* .abcdefghi...... */
++    0xb0, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70, /* 90-9f:           */
++    0x71, 0x72, 0xaa, 0xba, 0xe6, 0xb8, 0xc6, 0xa4, /* .jklmnopqr...... */
++    0xb5, 0x7e, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, /* a0-af:           */
++    0x79, 0x7a, 0xa1, 0xbf, 0xd0, 0x5b, 0xde, 0xae, /* .~stuvwxyz...[.. */
++    0xac, 0xa3, 0xa5, 0xb7, 0xa9, 0xa7, 0xb6, 0xbc, /* b0-bf:           */
++    0xbd, 0xbe, 0xdd, 0xa8, 0xaf, 0x5d, 0xb4, 0xd7, /* .............].. */
++    0x7b, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, /* c0-cf:           */
++    0x48, 0x49, 0xad, 0xf4, 0xf6, 0xf2, 0xf3, 0xf5, /* {ABCDEFGHI...... */
++    0x7d, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, /* d0-df:           */
++    0x51, 0x52, 0xb9, 0xfb, 0xfc, 0xf9, 0xfa, 0xff, /* }JKLMNOPQR...... */
++    0x5c, 0xf7, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, /* e0-ef:           */
++    0x59, 0x5a, 0xb2, 0xd4, 0xd6, 0xd2, 0xd3, 0xd5, /* \.STUVWXYZ...... */
++    0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, /* f0-ff:           */
++    0x38, 0x39, 0xb3, 0xdb, 0xdc, 0xd9, 0xda, 0x9f  /* 0123456789...... */
++};
++
++/*
++The US-ASCII to EBCDIC (character set IBM-1047) table:
++This table is bijective (no ambiguous or duplicate characters)
++*/
++const unsigned char os_toebcdic[256] = {
++    0x00, 0x01, 0x02, 0x03, 0x37, 0x2d, 0x2e, 0x2f, /* 00-0f:           */
++    0x16, 0x05, 0x15, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, /* ................ */
++    0x10, 0x11, 0x12, 0x13, 0x3c, 0x3d, 0x32, 0x26, /* 10-1f:           */
++    0x18, 0x19, 0x3f, 0x27, 0x1c, 0x1d, 0x1e, 0x1f, /* ................ */
++    0x40, 0x5a, 0x7f, 0x7b, 0x5b, 0x6c, 0x50, 0x7d, /* 20-2f:           */
++    0x4d, 0x5d, 0x5c, 0x4e, 0x6b, 0x60, 0x4b, 0x61, /*  !"#$%&'()*+,-./ */
++    0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, /* 30-3f:           */
++    0xf8, 0xf9, 0x7a, 0x5e, 0x4c, 0x7e, 0x6e, 0x6f, /* 0123456789:;<=>? */
++    0x7c, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, /* 40-4f:           */
++    0xc8, 0xc9, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, /* @ABCDEFGHIJKLMNO */
++    0xd7, 0xd8, 0xd9, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, /* 50-5f:           */
++    0xe7, 0xe8, 0xe9, 0xad, 0xe0, 0xbd, 0x5f, 0x6d, /* PQRSTUVWXYZ[\]^_ */
++    0x79, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, /* 60-6f:           */
++    0x88, 0x89, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, /* `abcdefghijklmno */
++    0x97, 0x98, 0x99, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, /* 70-7f:           */
++    0xa7, 0xa8, 0xa9, 0xc0, 0x4f, 0xd0, 0xa1, 0x07, /* pqrstuvwxyz{|}~. */
++    0x20, 0x21, 0x22, 0x23, 0x24, 0x04, 0x06, 0x08, /* 80-8f:           */
++    0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x09, 0x0a, 0x14, /* ................ */
++    0x30, 0x31, 0x25, 0x33, 0x34, 0x35, 0x36, 0x17, /* 90-9f:           */
++    0x38, 0x39, 0x3a, 0x3b, 0x1a, 0x1b, 0x3e, 0xff, /* ................ */
++    0x41, 0xaa, 0x4a, 0xb1, 0x9f, 0xb2, 0x6a, 0xb5, /* a0-af:           */
++    0xbb, 0xb4, 0x9a, 0x8a, 0xb0, 0xca, 0xaf, 0xbc, /* ................ */
++    0x90, 0x8f, 0xea, 0xfa, 0xbe, 0xa0, 0xb6, 0xb3, /* b0-bf:           */
++    0x9d, 0xda, 0x9b, 0x8b, 0xb7, 0xb8, 0xb9, 0xab, /* ................ */
++    0x64, 0x65, 0x62, 0x66, 0x63, 0x67, 0x9e, 0x68, /* c0-cf:           */
++    0x74, 0x71, 0x72, 0x73, 0x78, 0x75, 0x76, 0x77, /* ................ */
++    0xac, 0x69, 0xed, 0xee, 0xeb, 0xef, 0xec, 0xbf, /* d0-df:           */
++    0x80, 0xfd, 0xfe, 0xfb, 0xfc, 0xba, 0xae, 0x59, /* ................ */
++    0x44, 0x45, 0x42, 0x46, 0x43, 0x47, 0x9c, 0x48, /* e0-ef:           */
++    0x54, 0x51, 0x52, 0x53, 0x58, 0x55, 0x56, 0x57, /* ................ */
++    0x8c, 0x49, 0xcd, 0xce, 0xcb, 0xcf, 0xcc, 0xe1, /* f0-ff:           */
++    0x70, 0xdd, 0xde, 0xdb, 0xdc, 0x8d, 0x8e, 0xdf  /* ................ */
++};
+diff --git a/Source/cmGeneratorTarget.cxx b/Source/cmGeneratorTarget.cxx
+index 6235a2ae9f..88dc15af13 100644
+--- a/Source/cmGeneratorTarget.cxx
++++ b/Source/cmGeneratorTarget.cxx
+@@ -455,7 +455,8 @@ const char* cmGeneratorTarget::GetOutputTargetType(
+         switch (artifact) {
+           case cmStateEnums::RuntimeBinaryArtifact:
+             // A DLL shared library is treated as a runtime target.
+-            return "RUNTIME";
++            // On z/OS it's treated as library target.
++            return this->Makefile->IsOn("OS390") ? "LIBRARY" : "RUNTIME";
+           case cmStateEnums::ImportLibraryArtifact:
+             // A DLL import library is treated as an archive target.
+             return "ARCHIVE";
+diff --git a/Source/cmInstallCommand.cxx b/Source/cmInstallCommand.cxx
+index 7ca5b23187..d2f7a65f77 100644
+--- a/Source/cmInstallCommand.cxx
++++ b/Source/cmInstallCommand.cxx
+@@ -127,6 +127,7 @@ public:
+     const cmInstallCommandArguments* args) const;
+   std::string GetManDestination(const cmInstallCommandArguments* args) const;
+   std::string GetDocDestination(const cmInstallCommandArguments* args) const;
++  std::string GetImportLibrarySuffix(const cmInstallCommandArguments* args) const;
+   std::string GetDestinationForType(const cmInstallCommandArguments* args,
+                                     const std::string& type) const;
+ 
+@@ -653,6 +654,9 @@ bool HandleTargetsMode(std::vector<std::string> const& args,
+     return true;
+   }
+ 
++  // Check whether this is a z/OS platform.
++  bool zos_platform = helper.GetImportLibrarySuffix(nullptr) == ".x";
++
+   for (std::string const& tgt : targetList) {
+ 
+     if (helper.Makefile->IsAlias(tgt)) {
+@@ -792,19 +796,28 @@ bool HandleTargetsMode(std::vector<std::string> const& args,
+               target, archiveArgs, true, helper.Makefile->GetBacktrace());
+             artifactsSpecified = true;
+           }
+-          if (!runtimeArgs.GetDestination().empty()) {
++          if (!runtimeArgs.GetDestination().empty() && !zos_platform) {
+             // The DLL uses the RUNTIME properties.
+             runtimeGenerator = CreateInstallTargetGenerator(
+               target, runtimeArgs, false, helper.Makefile->GetBacktrace());
+             artifactsSpecified = true;
+           }
+-          if (!archiveGenerator && !runtimeGenerator) {
++          if (!libraryArgs.GetDestination().empty() && zos_platform) {
++            // The DLL uses the LIBRARY properties.
++            libraryGenerator = CreateInstallTargetGenerator(
++              target, libraryArgs, true, helper.Makefile->GetBacktrace());
++            artifactsSpecified = true;
++          }
++          if (!archiveGenerator && !runtimeGenerator && !libraryGenerator) {
+             archiveGenerator = CreateInstallTargetGenerator(
+               target, archiveArgs, true, helper.Makefile->GetBacktrace(),
+               helper.GetArchiveDestination(nullptr));
+             runtimeGenerator = CreateInstallTargetGenerator(
+               target, runtimeArgs, false, helper.Makefile->GetBacktrace(),
+               helper.GetRuntimeDestination(nullptr));
++            libraryGenerator = CreateInstallTargetGenerator(
++              target, libraryArgs, true, helper.Makefile->GetBacktrace(),
++              helper.GetLibraryDestination(nullptr));
+           }
+           if (runtimeDependencySet && runtimeGenerator) {
+             runtimeDependencySet->AddLibrary(runtimeGenerator.get());
+@@ -2354,6 +2367,12 @@ std::string Helper::GetDocDestination(
+                               this->GetDataRootDestination(nullptr) + "/doc");
+ }
+ 
++std::string Helper::GetImportLibrarySuffix(const cmInstallCommandArguments* args) const
++{
++  return this->Makefile->GetSafeDefinition("CMAKE_IMPORT_LIBRARY_SUFFIX");
++}
++
++
+ std::string Helper::GetDestinationForType(
+   const cmInstallCommandArguments* args, const std::string& type) const
+ {
+diff --git a/Source/cmLoadCommandCommand.cxx b/Source/cmLoadCommandCommand.cxx
+index 1f18ff2eda..d529bc5c30 100644
+--- a/Source/cmLoadCommandCommand.cxx
++++ b/Source/cmLoadCommandCommand.cxx
+@@ -1,7 +1,7 @@
+ /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
+    file Copyright.txt or https://cmake.org/licensing for details.  */
+ 
+-#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__)
++#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__) && !defined(__MVS__)
+ // POSIX APIs are needed
+ // NOLINTNEXTLINE(bugprone-reserved-identifier)
+ #  define _POSIX_C_SOURCE 200809L
+diff --git a/Source/cmLocalGenerator.cxx b/Source/cmLocalGenerator.cxx
+index 67c8bf2257..626747f668 100644
+--- a/Source/cmLocalGenerator.cxx
++++ b/Source/cmLocalGenerator.cxx
+@@ -3587,24 +3587,22 @@ std::string& cmLocalGenerator::CreateSafeUniqueObjectFileName(
+     if (this->Makefile->IsOn("CMAKE_MANGLE_OBJECT_FILE_NAMES")) {
+       bool done;
+       int cc = 0;
+-      char rpstr[100];
+-      snprintf(rpstr, sizeof(rpstr), "_p_");
+-      cmSystemTools::ReplaceString(ssin, "+", rpstr);
+-      std::string sssin = sin;
++      cmSystemTools::ReplaceString(ssin, "+", "_p_");
+       do {
+         done = true;
+         for (it = this->UniqueObjectNamesMap.begin();
+              it != this->UniqueObjectNamesMap.end(); ++it) {
+-          if (it->second == ssin) {
++          if (cmSystemTools::GetFilenameName(it->second) == cmSystemTools::GetFilenameName(ssin)) {
+             done = false;
++
++            std::ostringstream repStream;
++            repStream << "_" << cc++;
++
++            ssin.insert(ssin.rfind("."), repStream.str());
++
++            break;
+           }
+         }
+-        if (done) {
+-          break;
+-        }
+-        sssin = ssin;
+-        cmSystemTools::ReplaceString(ssin, "_p_", rpstr);
+-        snprintf(rpstr, sizeof(rpstr), "_p%d_", cc++);
+       } while (!done);
+     }
+ 
+diff --git a/Source/cmMakefile.cxx b/Source/cmMakefile.cxx
+index 469eac3e5d..0520960444 100644
+--- a/Source/cmMakefile.cxx
++++ b/Source/cmMakefile.cxx
+@@ -3922,6 +3922,14 @@ int cmMakefile::ConfigureFile(const std::string& infile,
+     // close the files before attempting to copy
+     fin.close();
+     fout.close();
++
++#if defined(__MVS__)
++    if ( !cmSystemTools::CopyFileAttributes(sinfile.c_str(),
++                                            tempOutputFile.c_str()) ) {
++      return 0;
++      }
++#endif
++
+     if (!cmSystemTools::CopyFileIfDifferent(tempOutputFile, soutfile)) {
+       this->IssueMessage(MessageType::FATAL_ERROR,
+                          cmSystemTools::GetLastSystemError());
+diff --git a/Source/cmStandardLexer.h b/Source/cmStandardLexer.h
+index 27225280d6..77ba6c9067 100644
+--- a/Source/cmStandardLexer.h
++++ b/Source/cmStandardLexer.h
+@@ -8,7 +8,7 @@
+ #  define _XOPEN_SOURCE 600
+ #endif
+ #if !defined(_POSIX_C_SOURCE) && !defined(_WIN32) && !defined(__sun) &&       \
+-  !defined(__OpenBSD__)
++  !defined(__OpenBSD__) && !defined(__MVS__)
+ /* POSIX APIs are needed */
+ // NOLINTNEXTLINE(bugprone-reserved-identifier)
+ #  define _POSIX_C_SOURCE 200809L
+diff --git a/Source/cmSystemTools.cxx b/Source/cmSystemTools.cxx
+index f077801dae..22b3678b98 100644
+--- a/Source/cmSystemTools.cxx
++++ b/Source/cmSystemTools.cxx
+@@ -1,7 +1,7 @@
+ /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
+    file Copyright.txt or https://cmake.org/licensing for details.  */
+ 
+-#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__)
++#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__) && !defined(__MVS__)
+ // POSIX APIs are needed
+ // NOLINTNEXTLINE(bugprone-reserved-identifier)
+ #  define _POSIX_C_SOURCE 200809L
+@@ -3452,6 +3452,14 @@ cm::string_view cmSystemTools::GetSystemName()
+     if (systemName.find("MSYS") != cm::string_view::npos) {
+       systemName = "MSYS";
+     }
++
++    // fix for OS/390, remove the /
++    static const cmsys::RegularExpression os390Regex("OS.390");
++    cmsys::RegularExpressionMatch match390;
++    if (os390Regex.find(uts_name.sysname, match390)) {
++      systemName = "OS390";
++    }
++
+     return systemName;
+   }
+   return "";
+diff --git a/Source/cmTimestamp.cxx b/Source/cmTimestamp.cxx
+index 677fdb658e..1edd1afa23 100644
+--- a/Source/cmTimestamp.cxx
++++ b/Source/cmTimestamp.cxx
+@@ -1,7 +1,7 @@
+ /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
+    file Copyright.txt or https://cmake.org/licensing for details.  */
+ 
+-#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__)
++#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__) && !defined(__MVS__)
+ // POSIX APIs are needed
+ // NOLINTNEXTLINE(bugprone-reserved-identifier)
+ #  define _POSIX_C_SOURCE 200809L
+diff --git a/Source/kwsys/ProcessUNIX.c b/Source/kwsys/ProcessUNIX.c
+index 45a9e6fc79..a31703e03b 100644
+--- a/Source/kwsys/ProcessUNIX.c
++++ b/Source/kwsys/ProcessUNIX.c
+@@ -53,6 +53,10 @@ do.
+ #  define FD_SETSIZE OPEN_MAX
+ #endif
+ 
++#if defined(__MVS__)
++#  define _XOPEN_SOURCE 600
++#endif
++
+ #include <assert.h>    /* assert */
+ #include <ctype.h>     /* isspace */
+ #include <dirent.h>    /* DIR, dirent */
+diff --git a/Source/kwsys/SystemTools.cxx b/Source/kwsys/SystemTools.cxx
+index 5889a4b0b4..670fabf482 100644
+--- a/Source/kwsys/SystemTools.cxx
++++ b/Source/kwsys/SystemTools.cxx
+@@ -18,6 +18,11 @@
+ #  define _WIN32_WINNT _WIN32_WINNT_VISTA
+ #endif
+ 
++#if defined(__MVS__)
++#define _OPEN_SYS_FILE_EXT 1
++#define CCSID_IBM_1047 1047
++#endif
++
+ #include "kwsysPrivate.h"
+ #include KWSYS_HEADER(RegularExpression.hxx)
+ #include KWSYS_HEADER(SystemTools.hxx)
+@@ -84,7 +89,9 @@
+ #  include <unistd.h>
+ #  include <utime.h>
+ #  ifndef __VMS
+-#    include <sys/param.h>
++#    ifndef __MVS__
++#      include <sys/param.h>
++#    endif
+ #    include <termios.h>
+ #  endif
+ #  include <csignal> /* sigprocmask */
+@@ -967,6 +974,23 @@ FILE* SystemTools::Fopen(const std::string& file, const char* mode)
+                     trimmedMode.end());
+   return _wfopen(Encoding::ToWindowsExtendedPath(file).c_str(),
+                  trimmedMode.c_str());
++#elif defined(__MVS__)
++  FILE* f = fopen(file.c_str(), mode);
++  int fd = fileno(f);
++  struct f_cnvrt query = {
++      QUERYCVT, // cvtcmd
++      0,        // pccsid
++      0,        // fccsid
++  };
++  if (fcntl(fd, F_CONTROL_CVT, &query) == -1)
++    return NULL;
++  if (query.cvtcmd == SETCVTOFF && query.pccsid != query.fccsid &&
++      query.fccsid == 819) {
++    query.cvtcmd = SETCVTON;
++    if (fcntl(fd, F_CONTROL_CVT, &query) == -1)
++      return NULL;
++  }
++  return f;
+ #else
+   return fopen(file.c_str(), mode);
+ #endif
+@@ -2439,6 +2463,12 @@ Status SystemTools::CopyFileContentBlockwise(std::string const& source,
+     return Status::POSIX_errno();
+   }
+ 
++#if defined(__MVS__)
++  if (!SystemTools::CopyFileAttributes(source, destination)) {
++    return Status::POSIX_errno(); 
++    }
++#endif
++
+   return Status::Success();
+ }
+ 
+@@ -2508,6 +2538,39 @@ Status SystemTools::CloneFileContent(std::string const& source,
+ #endif
+ }
+ 
++#if defined(__MVS__)
++bool SystemTools::CopyFileAttributes(const std::string& source, const std::string& destination)
++{
++  struct stat sourceAttributes;
++  if ( stat(source.c_str(),&sourceAttributes) )
++    {
++    return false;
++    }
++
++  attrib_t destinationAttributes;
++  memset(&destinationAttributes, 0, sizeof(destinationAttributes));
++  destinationAttributes.att_filetagchg = 1;
++
++  // If source file is text, tag output file as IBM-1047 text. Otherwise copy original tagging.
++  if ( sourceAttributes.st_tag.ft_txtflag == 1 )
++    {
++    destinationAttributes.att_filetag.ft_ccsid = CCSID_IBM_1047;
++    destinationAttributes.att_filetag.ft_txtflag = 1;
++    }
++  else
++    {
++    destinationAttributes.att_filetag.ft_ccsid = sourceAttributes.st_tag.ft_ccsid;
++    destinationAttributes.att_filetag.ft_txtflag = 0;
++    }
++
++  if ( __chattr((char*)destination.c_str(), &destinationAttributes, sizeof(destinationAttributes)) )
++    {
++    return false;
++    }
++  return true;
++}
++#endif
++
+ /**
+  * Copy a file named by "source" to the file named by "destination".
+  */
+diff --git a/Source/kwsys/SystemTools.hxx.in b/Source/kwsys/SystemTools.hxx.in
+index acce01570d..7e17c296fc 100644
+--- a/Source/kwsys/SystemTools.hxx.in
++++ b/Source/kwsys/SystemTools.hxx.in
+@@ -601,6 +601,13 @@ public:
+    */
+   static bool SameFile(const std::string& file1, const std::string& file2);
+ 
++#if defined(__MVS__)
++  /**
++   * Copy file attributes.
++   */
++  static bool CopyFileAttributes(const std::string& source, const std::string& destination);
++#endif
++
+   /**
+    * Copy a file.
+    */
+diff --git a/Utilities/cmcurl/include/curl/system.h b/Utilities/cmcurl/include/curl/system.h
+index 000fea6c75..1e4469f591 100644
+--- a/Utilities/cmcurl/include/curl/system.h
++++ b/Utilities/cmcurl/include/curl/system.h
+@@ -217,7 +217,7 @@
+ #  endif
+ 
+ #elif defined(__MVS__)
+-#  if defined(__IBMC__) || defined(__IBMCPP__)
++#  if defined(__IBMC__) || defined(__IBMCPP__) || defined(__clang__)
+ #    if defined(_ILP32)
+ #    elif defined(_LP64)
+ #    endif
+@@ -455,7 +455,7 @@
+ #if defined(__STDC__) || defined(_MSC_VER) || defined(__cplusplus) || \
+   defined(__HP_aCC) || defined(__BORLANDC__) || defined(__LCC__) || \
+   defined(__POCC__) || defined(__SALFORDC__) || defined(__HIGHC__) || \
+-  defined(__ILEC400__)
++  defined(__ILEC400__) || defined(__MVS__)
+   /* This compiler is believed to have an ISO compatible preprocessor */
+ #define CURL_ISOCPP
+ #else
+diff --git a/Utilities/cmcurl/lib/hostip.c b/Utilities/cmcurl/lib/hostip.c
+index 7000b85501..332acfc558 100644
+--- a/Utilities/cmcurl/lib/hostip.c
++++ b/Utilities/cmcurl/lib/hostip.c
+@@ -20,6 +20,10 @@
+  *
+  ***************************************************************************/
+ 
++#ifdef __MVS__
++#define _OPEN_SYS_SOCK_IPV6
++#endif
++
+ #include "curl_setup.h"
+ 
+ #ifdef HAVE_NETINET_IN_H
+diff --git a/Utilities/cmcurl/lib/hostip6.c b/Utilities/cmcurl/lib/hostip6.c
+index c2d5f08e32..a17d53f7c1 100644
+--- a/Utilities/cmcurl/lib/hostip6.c
++++ b/Utilities/cmcurl/lib/hostip6.c
+@@ -20,6 +20,10 @@
+  *
+  ***************************************************************************/
+ 
++#ifdef __MVS__
++#define _OPEN_SYS_SOCK_IPV6
++#endif
++
+ #include "curl_setup.h"
+ 
+ /***********************************************************************
+diff --git a/Utilities/cmlibuv/CMakeLists.txt b/Utilities/cmlibuv/CMakeLists.txt
+index b815a5cf2e..4fbcd923a4 100644
+--- a/Utilities/cmlibuv/CMakeLists.txt
++++ b/Utilities/cmlibuv/CMakeLists.txt
+@@ -137,6 +137,33 @@ if(CMAKE_SYSTEM_NAME STREQUAL "AIX")
+     )
+ endif()
+ 
++if(CMAKE_SYSTEM_NAME STREQUAL "OS390")
++  list(APPEND uv_headers
++    include/uv/os390.h
++    )
++  enable_language(CXX)
++  list(APPEND uv_defines PATH_MAX=1024)
++  list(APPEND uv_defines _AE_BIMODAL)
++  list(APPEND uv_defines _ALL_SOURCE)
++  list(APPEND uv_defines _ISOC99_SOURCE)
++  list(APPEND uv_defines _LARGE_TIME_API)
++  list(APPEND uv_defines _OPEN_MSGQ_EXT)
++  list(APPEND uv_defines _OPEN_SYS_FILE_EXT)
++  list(APPEND uv_defines _OPEN_SYS_IF_EXT)
++  list(APPEND uv_defines _OPEN_SYS_SOCK_EXT3)
++  list(APPEND uv_defines _OPEN_SYS_SOCK_IPV6)
++  list(APPEND uv_defines _UNIX03_SOURCE)
++  list(APPEND uv_defines _UNIX03_THREADS)
++  list(APPEND uv_defines _UNIX03_WITHDRAWN)
++  list(APPEND uv_defines _XOPEN_SOURCE=600)
++  list(APPEND uv_defines _XOPEN_SOURCE_EXTENDED)
++  list(APPEND uv_sources
++       src/unix/pthread-fixes.c
++       src/unix/os390.c
++       src/unix/os390-syscalls.c
++       src/unix/os390-proctitle.c)
++endif()
++
+ if(CMAKE_SYSTEM_NAME STREQUAL "OS400")
+   list(APPEND uv_headers
+     include/uv/posix.h
+diff --git a/Utilities/cmlibuv/include/uv/posix.h b/Utilities/cmlibuv/include/uv/posix.h
+index 9a96634db0..98248bff05 100644
+--- a/Utilities/cmlibuv/include/uv/posix.h
++++ b/Utilities/cmlibuv/include/uv/posix.h
+@@ -22,6 +22,10 @@
+ #ifndef UV_POSIX_H
+ #define UV_POSIX_H
+ 
++#ifdef __MVS__
++#define UV_PLATFORM_SEM_T long
++#endif
++
+ #define UV_PLATFORM_LOOP_FIELDS                                               \
+   struct pollfd* poll_fds;                                                    \
+   size_t poll_fds_used;                                                       \
+diff --git a/Utilities/cmlibuv/src/unix/atomic-ops.h b/Utilities/cmlibuv/src/unix/atomic-ops.h
+index 63d8268ab5..eb648ada46 100644
+--- a/Utilities/cmlibuv/src/unix/atomic-ops.h
++++ b/Utilities/cmlibuv/src/unix/atomic-ops.h
+@@ -42,7 +42,7 @@ UV_UNUSED(static int cmpxchgi(int* ptr, int oldval, int newval)) {
+      Its documentation suggests using C++11 atomics but this is C.  */
+   __compare_and_swap((volatile int*)ptr, &oldval, newval);
+   return oldval;
+-#elif defined(__MVS__)
++#elif defined(__MVS__) && defined(__ibmxl__)
+   unsigned int op4;
+   if (__plo_CSST(ptr, (unsigned int*) &oldval, newval,
+                 (unsigned int*) ptr, *ptr, &op4))
+diff --git a/Utilities/cmlibuv/src/unix/csrsic.h b/Utilities/cmlibuv/src/unix/csrsic.h
+new file mode 100644
+index 0000000000..1cb6ba183e
+--- /dev/null
++++ b/Utilities/cmlibuv/src/unix/csrsic.h
+@@ -0,0 +1,676 @@
++
++#ifndef __CSRSI                                                                 
++                                                                                
++#define __CSRSI                                                                 
++                                                                                
++/*********************************************************************          
++ *         Type Definitions for User Specified Parameters            *          
++ *********************************************************************/         
++                                                                                
++/*  Type for Request operand of CSRSI                                */         
++typedef int  CSRSIRequest;                                                      
++                                                                                
++/*  Type for InfoAreaLen operand of CSRSI                            */         
++typedef int  CSRSIInfoAreaLen;                                                  
++                                                                                
++/*  Type for Return Code                                             */         
++typedef int  CSRSIReturnCode;                                                   
++                                                                                
++                                                                                
++                                                                                
++/*********************************************************************          
++ *           Function Prototypes for Service Routines                *          
++ *********************************************************************/         
++                                                                                
++#ifdef __cplusplus                                                              
++   extern "OS" ??<                                                              
++#else                                                                           
++  #pragma linkage(CSRSI_calltype,OS)                                            
++#endif                                                                          
++typedef void CSRSI_calltype(                                                    
++   CSRSIRequest      __REQUEST,   /* Input  - request type           */         
++   CSRSIInfoAreaLen  __INFOAREALEN,  /* Input - length of infoarea   */         
++   void             *__INFOAREA,  /* Input  - info area              */         
++   CSRSIReturnCode  *__RC);       /* Output - return code            */         
++                                                                                
++extern CSRSI_calltype csrsi;                                                    
++                                                                                
++                                                                                
++#ifdef __cplusplus                                                              
++   ??>                                                                          
++#endif                                                                          
++                                                                                
++#ifndef __cplusplus                                                             
++#define csrsi_byaddr(Request, Flen, Fptr, Rcptr)                    \           
++??<                                                                 \           
++ struct CSRSI_PSA* CSRSI_pagezero = 0;                              \           
++   CSRSI_pagezero->CSRSI_cvt->CSRSI_cvtcsrt->CSRSI_addr             \           
++           (Request,Flen,Fptr,Rcptr);                               \           
++??>;                                                                            
++#endif                                                                          
++                                                                                                                                                      
++struct CSRSI_CSRT ??<                                                           
++   unsigned char CSRSI_csrt_filler1  ??(48??);                                  
++   CSRSI_calltype* CSRSI_addr;                                                  
++
++ 
++  struct CSRSI_CVT ??<                                                            
++   unsigned char CSRSI_cvt_filler1  ??(116??);                                  
++  struct ??<                                                                    
++    int CSRSI_cvtdcb_rsvd1 : 4;      /* Not needed                   */         
++    int CSRSI_cvtosext : 1;          /* If on, indicates that the               
++                    CVTOSLVL fields are valid                        */         
++    int CSRSI_cvtdcb_rsvd2 : 3;      /* Not needed                   */         
++         ??> CSRSI_cvtdcb;                                                      
++   unsigned char CSRSI_cvt_filler2  ??(427??);                                  
++   struct CSRSI_CSRT * CSRSI_cvtcsrt;                                           
++   unsigned char CSRSI_cvt_filler3  ??(716??);                                  
++   unsigned char CSRSI_cvtoslv0;                                                
++   unsigned char CSRSI_cvtoslv1;                                                
++   unsigned char CSRSI_cvtoslv2;                                                
++   unsigned char CSRSI_cvtoslv3;                                                
++  struct ??<                                                                    
++    int CSRSI_cvtcsrsi : 1;          /* If on, indicates that the               
++                                        CSRSI service is available   */         
++    int CSRSI_cvtoslv1_rsvd1 : 7;    /* Not needed                   */         
++         ??> CSRSI_cvtoslv4;                                                    
++   unsigned char CSRSI_cvt_filler4 ??(11??);        /*               */         
++  ??>;
++??>;                                                                            
++                                                                                
++                                                                                
++struct CSRSI_PSA ??<                                                            
++   char CSRSI_psa_filler??(16??);                                               
++   struct CSRSI_CVT* CSRSI_cvt;                                                 
++??>;                                                                            
++                                                                                
++/*  End of CSRSI Header                                              */         
++                                                                                
++#endif                                                                          
++                                                                                
++/*********************************************************************/         
++/* si11v1 represents the output for a V1 CPC when general CPC        */         
++/* information is requested                                          */         
++/*********************************************************************/         
++                                                                                
++typedef struct ??<                                                              
++  unsigned char  _filler1??(32??);  /* Reserved                      */         
++  unsigned char  si11v1cpcmanufacturer??(16??); /*                              
++                                       The 16-character (0-9                    
++                                       or uppercase A-Z) EBCDIC name            
++                                       of the manufacturer of the V1            
++                                       CPC. The name is                         
++                                       left-justified with trailing             
++                                       blank characters if necessary.           
++                                                                     */         
++  unsigned char  si11v1cpctype??(4??); /* The 4-character (0-9) EBCDIC          
++                                       type identifier of the V1 CPC.           
++                                                                     */         
++  unsigned char  _filler2??(12??);  /* Reserved                      */         
++                                                                               
++  unsigned char  si11v1cpcmodel??(16??); /* The 16-character (0-9 or            
++                                       uppercase A-Z) EBCDIC model              
++                                       identifier of the V1 CPC. The            
++                                       identifier is left-justified             
++                                       with trailing blank characters           
++                                       if necessary.                 */         
++  unsigned char  si11v1cpcsequencecode??(16??); /*                              
++                                       The 16-character (0-9                    
++                                       or uppercase A-Z) EBCDIC                 
++                                       sequence code of the V1 CPC.             
++                                       The sequence code is                     
++                                       right-justified with leading             
++                                       EBCDIC zeroes if necessary.              
++                                                                     */         
++  unsigned char  si11v1cpcplantofmanufacture??(4??); /* The 4-character         
++                                       (0-9 or uppercase A-Z) EBCDIC            
++                                       plant code that identifies the           
++                                       plant of manufacture for the             
++                                       V1 CPC. The plant code is                
++                                       left-justified with trailing             
++                                       blank characters if necessary.           
++                                                                     */         
++  unsigned char  _filler3??(3996??); /* Reserved                     */         
++??> si11v1;                                                                     
++                                                                                
++/*********************************************************************/         
++/* si22v1 represents the output for a V1 CPC when information        */         
++/* is requested about the set of CPUs                                */         
++/*********************************************************************/         
++                                                                                
++typedef struct ??<                                                              
++  unsigned char  _filler1??(32??);  /* Reserved                      */         
++  unsigned char  si22v1cpucapability??(4??); /*                                 
++                                       An unsigned binary integer               
++                                       that specifies the capability            
++                                       of one of the CPUs contained             
++                                       in the V1 CPC. It is used as             
++                                       an indication of the                     
++                                       capability of the CPU relative           
++                                       to the capability of other CPU           
++                                       models.                       */         
++  unsigned int   si22v1totalcpucount             : 16; /* A 2-byte              
++                                       unsigned integer                         
++                                       that specifies the                       
++                                       total number of CPUs contained           
++                                       in the V1 CPC. This number               
++                                       includes all CPUs in the                 
++                                       configured state, the standby            
++                                       state, and the reserved state.           
++                                                                     */         
++ 
++  unsigned int   si22v1configuredcpucount        : 16; /* A 2-byte              
++                                       unsigned binary                          
++                                       integer that specifies                   
++                                       the total number of CPUs that            
++                                       are in the configured state. A           
++                                       CPU is in the configured state           
++                                       when it is described in the              
++                                       V1-CPC configuration                     
++                                       definition and is available to           
++                                       be used to execute programs.             
++                                                                     */         
++  unsigned int   si22v1standbycpucount           : 16; /* A 2-byte              
++                                       unsigned integer                         
++                                       that specifies the                       
++                                       total number of CPUs that are            
++                                       in the standby state. A CPU is           
++                                       in the standby state when it             
++                                       is described in the V1-CPC               
++                                       configuration definition, is             
++                                       not available to be used to              
++                                       execute programs, but can be             
++                                       used to execute programs by              
++                                       issuing instructions to place            
++                                       it in the configured state.              
++                                                                     */         
++  unsigned int   si22v1reservedcpucount          : 16; /* A 2-byte              
++                                       unsigned binary                          
++                                       integer that specifies                   
++                                       the total number of CPUs that            
++                                       are in the reserved state. A             
++                                       CPU is in the reserved state             
++                                       when it is described in the              
++                                       V1-CPC configuration                     
++                                       definition, is not available             
++                                       to be used to execute                    
++                                       programs, and cannot be made             
++                                       available to be used to                  
++                                       execute programs by issuing              
++                                       instructions to place it in              
++                                       the configured state, but it             
++                                       may be possible to place it in           
++                                       the standby or configured                
++                                       state through manually                   
++                                       initiated actions             */         
++  struct ??<                                                                    
++    unsigned char  _si22v1mpcpucapaf??(2??); /* Each individual                 
++                                       adjustment factor.            */         
++    unsigned char  _filler2??(4050??);                                          
++  ??> si22v1mpcpucapafs;                                                        
++??> si22v1;                                                                     
++                                                                                
++#define si22v1mpcpucapaf  si22v1mpcpucapafs._si22v1mpcpucapaf                   
++                                                                                
++ 
++/*********************************************************************/         
++/* si22v2 represents the output for a V2 CPC when information        */         
++/* is requested about the set of CPUs                                */         
++/*********************************************************************/         
++               typedef struct ??<                                                              
++  unsigned char  _filler1??(32??);  /* Reserved                      */         
++  unsigned int   si22v2cpcnumber                 : 16; /* A 2-byte              
++                                       unsigned integer                         
++                                       which is the number of                   
++                                       this V2 CPC. This number                 
++                                       distinguishes this V2 CPC from           
++                                       all other V2 CPCs provided by            
++                                       the same logical-partition               
++                                       hypervisor                    */         
++  unsigned char  _filler2;          /* Reserved                      */         
++  struct ??<                                                                    
++    unsigned int   _si22v2lcpudedicated           : 1; /*                       
++                                       When one, indicates that                 
++                                       one or more of the logical               
++                                       CPUs for this V2 CPC are                 
++                                       provided using V1 CPUs that              
++                                       are dedicated to this V2 CPC             
++                                       and are not used to provide              
++                                       logical CPUs for any other V2            
++                                       CPCs. The number of logical              
++                                       CPUs that are provided using             
++                                       dedicated V1 CPUs is specified           
++                                       by the dedicated-LCPU-count              
++                                       value. When zero, bit 0                  
++                                       indicates that none of the               
++                                       logical CPUs for this V2 CPC             
++                                       are provided using V1 CPUs               
++                                       that are dedicated to this V2            
++                                       CPC.                          */         
++    unsigned int   _si22v2lcpushared               : 1; /*                      
++                                       When one, indicates that                 
++                                       or more of the logical CPUs              
++                                       for this V2 CPC are provided             
++                                       using V1 CPUs that can be used           
++                                       to provide logical CPUs for              
++                                       other V2 CPCs. The number of             
++                                       logical CPUs that are provided           
++                                       using shared V1 CPUs is                  
++                                       specified by the                         
++                                       shared-LCPU-count value. When            
++                                       zero, it indicates that none             
++                                       of the logical CPUs for this             
++                                       V2 CPC are provided using                
++                                       shared V1 CPUs.               */         
++ 
++                                                                
++   unsigned int   _si22v2lcpuulimit               : 1; /*                      
++                                       Utilization limit. When one,             
++                                       indicates that the amount of             
++                                       use of the V1-CPC CPUs that              
++                                       are used to provide the                  
++                                       logical CPUs for this V2 CPC             
++                                       is limited. When zero, it                
++                                       indicates that the amount of             
++                                       use of the V1-CPC CPUs that              
++                                       are used to provide the                  
++                                       logical CPUs for this V2 CPC             
++                                       is unlimited.                 */         
++    unsigned int   _filler3                        : 5; /* Reserved             
++                                                                     */         
++  ??> si22v2lcpuc;                  /* Characteristics               */         
++  unsigned int   si22v2totallcpucount            : 16; /*                       
++                                       A 2-byte unsigned                        
++                                       integer that specifies the               
++                                       total number of logical CPUs             
++                                       that are provided for this V2            
++                                       CPC. This number includes all            
++                                       of the logical CPUs that are             
++                                       in the configured state, the             
++                                       standby state, and the                   
++                                       reserved state.               */         
++  unsigned int   si22v2configuredlcpucount       : 16; /*                       
++                                       A 2-byte unsigned                        
++                                       binary integer that specifies            
++                                       the total number of logical              
++                                       CPUs for this V2 CPC that are            
++                                       in the configured state. A               
++                                       logical CPU is in the                    
++                                       configured state when it is              
++                                       described in the V2-CPC                  
++                                       configuration definition and             
++                                       is available to be used to               
++                                       execute programs.             */         
++  unsigned int   si22v2standbylcpucount          : 16; /*                       
++                                       A 2-byte unsigned                        
++                                       binary integer that specifies            
++                                       the total number of logical              
++                                       CPUs that are in the standby             
++                                       state. A logical CPU is in the           
++                                       standby state when it is                 
++                                       described in the V2-CPC                  
++                                       configuration definition, is             
++                                       not available to be used to              
++                                       execute programs, but can be             
++                                       used to execute programs by              
++                                       issuing instructions to place            
++                                       it in the configured state.              
++                                                                     */         
++ 
++ unsigned int   si22v2reservedlcpucount         : 16; /*                       
++                                       A 2-byte unsigned                        
++                                       binary integer that specifies            
++                                       the total number of logical              
++                                       CPUs that are in the reserved            
++                                       state. A logical CPU is in the           
++                                       reserved state when it is                
++                                       described in the V2-CPC                  
++                                       configuration definition, is             
++                                       not available to be used to              
++                                       execute programs, and cannot             
++                                       be made available to be used             
++                                       to execute programs by issuing           
++                                       instructions to place it in              
++                                       the configured state, but it             
++                                       may be possible to place it in           
++                                       the standby or configured                
++                                       state through manually                   
++                                       initiated actions             */         
++  unsigned char  si22v2cpcname??(16??); /*                                      
++                                       The 8-character EBCDIC name of           
++                                       this V2 CPC. The name is                 
++                                       left-justified with trailing             
++                                       blank characters if necessary.           
++                                                                     */         
++  unsigned char  si22v2cpccapabilityaf??(4??); /* Capability Adjustment         
++                                       Factor (CAF). An unsigned                
++                                       binary integer of 1000 or                
++                                       less. The adjustment factor              
++                                       specifies the amount of the              
++                                       V1-CPC capability that is                
++                                       allowed to be used for this V2           
++                                       CPC by the logical-partition             
++                                       hypervisor. The fraction of              
++                                       V1-CPC capability is                     
++                                       determined by dividing the CAF           
++                                       value by 1000.                */         
++  unsigned char  _filler4??(16??);  /* Reserved                      */         
++  unsigned int   si22v2dedicatedlcpucount        : 16; /*                       
++                                       A 2-byte unsigned                        
++                                       binary integer that specifies            
++                                       the number of configured-state           
++                                       logical CPUs for this V2 CPC             
++                                       that are provided using                  
++                                       dedicated V1 CPUs. (See the              
++                                       description of bit                       
++                                       si22v2lcpudedicated.)         */         
++ 
++  unsigned int   si22v2sharedlcpucount           : 16; /*                       
++                                       A 2-byte unsigned                        
++                                       integer that specifies the               
++                                       number of configured-state               
++                                       logical CPUs for this V2 CPC             
++                                       that are provided using shared           
++                                       V1 CPUs. (See the description            
++                                       of bit si22v2lcpushared.)                
++                                                                      */         
++   unsigned char  _filler5??(4012??); /* Reserved                     */         
++    ??> si22v2;                                                                     
++                                                                                
++#define si22v2lcpudedicated       si22v2lcpuc._si22v2lcpudedicated              
++#define si22v2lcpushared          si22v2lcpuc._si22v2lcpushared                 
++#define si22v2lcpuulimit          si22v2lcpuc._si22v2lcpuulimit                 
++                                                                                
++/*********************************************************************/         
++/* si22v3db is a description block that comprises part of the        */         
++/* si22v3 data.                                                      */         
++/*********************************************************************/         
++                                                                                
++typedef struct ??<                                                              
++  unsigned char  _filler1??(4??);   /* Reserved                      */         
++  unsigned int   si22v3dbtotallcpucount            : 16; /*                     
++                                       A 2-byte unsigned                        
++                                       binary integer that specifies            
++                                       the total number of logical              
++                                       CPUs that are provided for               
++                                       this V3 CPC. This number                 
++                                       includes all of the logical              
++                                       CPUs that are in the                     
++                                       configured state, the standby            
++                                       state, and the reserved state.           
++                                                                     */         
++  unsigned int   si22v3dbconfiguredlcpucount       : 16; /*                     
++                                       A 2-byte unsigned                        
++                                       binary integer that specifies            
++                                       the number of logical CPUs for           
++                                       this V3 CPC that are in the              
++                                       configured state. A logical              
++                                       CPU is in the configured state           
++                                       when it is described in the              
++                                       V3-CPC configuration                     
++                                       definition and is available to           
++                                       be used to execute programs.             
++                                                                     */         
++ 
++ unsigned int   si22v3dbstandbylcpucount          : 16; /*                     
++                                       A 2-byte unsigned                        
++                                       binary integer that specifies            
++                                       the number of logical CPUs for           
++                                       this V3 CPC that are in the              
++                                       standby state. A logical CPU             
++                                       is in the standby state when             
++                                       it is described in the V3-CPC            
++                                       configuration definition, is             
++                                       not available to be used to              
++                                       execute programs, but can be             
++                                       used to execute programs by              
++                                       issuing instructions to place            
++                                       it in the configured state.              
++                                                                     */         
++ unsigned int   si22v3dbreservedlcpucount         : 16; /*                     
++                                       A 2-byte unsigned                        
++                                       binary integer that specifies            
++                                       the number of logical CPUs for           
++                                       this V3 CPC that are in the              
++                                       reserved state. A logical CPU            
++                                       is in the reserved state when            
++                                       it is described in the V2-CPC            
++                                       configuration definition, is             
++                                       not available to be used to              
++                                       execute programs, and cannot             
++                                       be made available to be used             
++                                       to execute programs by issuing           
++                                       instructions to place it in              
++                                       the configured state, but it             
++                                       may be possible to place it in           
++                                       the standby or configured                
++                                       state through manually                   
++                                       initiated actions             */         
++  unsigned char  si22v3dbcpcname??(8??); /* The 8-character EBCDIC name         
++                                       of this V3 CPC. The name is              
++                                       left-justified with trailing             
++                                       blank characters if necessary.           
++                                                                     */         
++  unsigned char  si22v3dbcpccaf??(4??); /* A 4-byte unsigned binary             
++                                        integer that specifies an               
++                                        adjustment factor. The                  
++                                        adjustment factor specifies             
++                                        the amount of the V1-CPC or             
++                                        V2-CPC capability that is               
++                                        allowed to be used for this V3          
++                                        CPC by the                              
++                                        virtual-machine-hypervisor              
++                                        program.                     */         
++ 
++ unsigned char  si22v3dbvmhpidentifier??(16??); /* The 16-character            
++                                       EBCDIC identifier of the                 
++                                       virtual-machine-hypervisor               
++                                       program that provides this V3            
++                                       CPC. (This identifier may                
++                                       include qualifiers such as               
++                                       version number and release               
++                                       level). The identifier is                
++                                       left-justified with trailing             
++                                       blank characters if necessary.           
++                                                                     */         
++  unsigned char  _filler2??(24??);  /* Reserved                      */         
++??> si22v3db;                                                                   
++/*********************************************************************/         
++/* si22v3 represents the output for a V3 CPC when information        */         
++/* is requested about the set of CPUs                                */         
++/*********************************************************************/         
++                                                                                   
++typedef struct ??<                                                              
++  unsigned char  _filler1??(28??);  /* Reserved                      */         
++  unsigned char  _filler2??(3??);   /* Reserved                      */         
++  struct ??<                                                                    
++      unsigned int   _filler3                : 4; /* Reserved                   
++                                                                     */         
++      unsigned int   _si22v3dbcount          : 4; /*                            
++                                       Description Block Count. A               
++                                       4-bit unsigned binary integer            
++                                       that indicates the number (up            
++                                       to 8) of V3-CPC description              
++                                       blocks that are stored in the            
++                                       si22v3dbe array.              */         
++  ??> si22v3dbcountfield;           /*                               */         
++  si22v3db  si22v3dbe??(8??);    /* Array of entries. Only the number           
++                                    indicated by si22v3dbcount                  
++                                    are valid                        */         
++  unsigned char  _filler5??(3552??); /* Reserved                     */         
++??> si22v3;                                                                     
++                                                                                
++#define si22v3dbcount      si22v3dbcountfield._si22v3dbcount                    
++                                                                                
++                                                                                
++/*********************************************************************/         
++/* SI00 represents the "starter" information. This structure is      */         
++/* part of the information returned on every CSRSI request.          */         
++/*********************************************************************/         
++                                                                                 
++typedef struct ??<                                                              
++  char           si00cpcvariety;    /* SI00CPCVariety_V1CPC_MACHINE,            
++                                       SI00CPCVariety_V2CPC_LPAR, or            
++                                       SI00CPCVariety_V3CPC_VM       */         
++    struct ??<                                                                  
++               int   _si00validsi11v1  : 1; /* si11v1 was requested and         
++                                   the information returned is valid            
++                                                                     */         
++               int   _si00validsi22v1  : 1; /* si22v2 was requested and         
++                                   the information returned is valid            
++                                                                     */         
++               int   _si00validsi22v2  : 1; /* si22v2 was requested and         
++                                   the information returned is valid            
++                                                                     */         
++               int   _si00validsi22v3  : 1; /* si22v3 was requested and         
++                                   the information returned is valid            
++                                                                     */         
++               int   _filler1          : 4; /* Reserved              */         
++    ??> si00validityflags;                                                      
++  unsigned char  _filler2??(2??);   /* Reserved                      */         
++  unsigned char  si00pccacpid??(12??); /* PCCACPID value for this CPU           
++                                                                     */         
++  unsigned char  si00pccacpua??(2??); /* PCCACPUA value for this CPU            
++                                                                     */         
++  unsigned char  si00pccacafm??(2??); /* PCCACAFM value for this CPU            
++                                                                     */         
++  unsigned char  _filler3??(4??);   /* Reserved                      */         
++  unsigned char  si00lastupdatetimestamp??(8??); /* Time of last STSI           
++                                       update, via STCK              */         
++  unsigned char  _filler4??(32??);  /* Reserved                      */         
++ ??> si00;                                                                       
++                                                                                
++#define si00validsi11v1         si00validityflags._si00validsi11v1              
++#define si00validsi22v1         si00validityflags._si00validsi22v1              
++#define si00validsi22v2         si00validityflags._si00validsi22v2              
++#define si00validsi22v3         si00validityflags._si00validsi22v3              
++                                                                                
++/*********************************************************************/         
++/* siv1 represents the information returned when V1CPC_MACHINE       */         
++/* data is requested                                                 */         
++/*********************************************************************/         
++                                                                                
++typedef struct ??<                                                              
++  si00 siv1si00;                                    /* Area mapped by           
++                                       struct si00                   */         
++  si11v1 siv1si11v1;                                    /* Area                 
++                                       mapped by struct si11v1       */         
++  si22v1 siv1si22v1;                                    /* Area                 
++                                       mapped by struct si22v1       */         
++??> siv1;                                                                       
++                                                                                
++ 
++/*********************************************************************/         
++/* siv1v2 represents the information returned when V1CPC_MACHINE     */         
++/* data and V2CPC_LPAR data is requested                             */         
++/*********************************************************************/         
++                                                                                
++typedef struct ??<                                                              
++  si00 siv1v2si00;                                  /* Area mapped by           
++                                       by struct si00                */         
++  si11v1 siv1v2si11v1;                                    /* Area               
++                                       mapped by struct si11v1       */         
++  si22v1 siv1v2si22v1;                                    /* Area               
++                                       mapped by struct si22v2       */         
++  si22v2 siv1v2si22v2;                                    /* Area               
++                                       mapped by struct si22v2       */         
++??> siv1v2;                                                                     
++                                                                                
++/*********************************************************************/         
++/* siv1v2v3 represents the information returned when V1CPC_MACHINE   */         
++/* data, V2CPC_LPAR data and V3CPC_VM data is requested              */         
++/*********************************************************************/         
++                                                                                
++ typedef struct ??<                                                              
++  si00 siv1v2v3si00;                                    /* Area                 
++                                       mapped by struct si00         */         
++  si11v1 siv1v2v3si11v1;                                    /* Area             
++                                       mapped by struct si11v1       */         
++  si22v1 siv1v2v3si22v1;                                    /* Area             
++                                       mapped by struct si22v1       */         
++  si22v2 siv1v2v3si22v2;                                    /* Area             
++                                       mapped by struct si22v2       */         
++  si22v3 siv1v2v3si22v3;                                    /* Area             
++                                       mapped by struct si22v3       */         
++ ??> siv1v2v3;                                                                   
++                                                                                
++/*********************************************************************/         
++/* siv1v3 represents the information returned when V1CPC_MACHINE     */         
++/* data and V3CPC_VM data is requested                               */         
++/*********************************************************************/         
++                                                                                
++typedef struct ??<                                                              
++  si00 siv1v3si00;                                    /* Area mapped            
++                                       by struct si00                */         
++  si11v1 siv1v3si11v1;                                    /* Area               
++                                       mapped by struct si11v1       */         
++  si22v1 siv1v3si22v1;                                    /* Area               
++                                       mapped by struct si22v1       */         
++  si22v3 siv1v3si22v3;                                    /* Area               
++                                       mapped by struct si22v3       */         
++??> siv1v3;                                                                     
++                                                                            
++
++/*********************************************************************/         
++/* siv2 represents the information returned when V2CPC_LPAR          */         
++/* data is requested                                                 */         
++/*********************************************************************/         
++                                                                                
++typedef struct ??<                                                              
++  si00 siv2si00;                    /* Area mapped by                           
++                                       struct si00                   */         
++  si22v2 siv2si22v2;                /* Area                                     
++                                       mapped by struct si22v2       */         
++??> siv2;                                                                       
++                                                                                
++/*********************************************************************/         
++/* siv2v3 represents the information returned when V2CPC_LPAR        */         
++/* and V3CPC_VM data is requested                                    */         
++/*********************************************************************/         
++                                                                                
++typedef struct ??<                                                              
++  si00 siv2v3si00;                  /* Area mapped                              
++                                       by struct si00                */         
++  si22v2 siv2v3si22v2;              /* Area                                     
++                                       mapped by struct si22v2       */         
++  si22v3 siv2v3si22v3;              /* Area                                     
++                                       mapped by struct si22v3       */         
++??> siv2v3;                                                                     
++                                                                                
++/*********************************************************************/         
++/* siv3 represents the information returned when V3CPC_VM            */         
++/* data is requested                                                 */         
++/*********************************************************************/         
++                                                                                
++typedef struct ??<                                                              
++  si00 siv3si00;                    /* Area mapped by                           
++                                       struct si00                   */         
++  si22v3 siv3si22v3;                /* Area                                     
++                                       mapped by struct si22v3       */         
++??> siv3;                                                                 
++            
++/****************************************************************          
++ *       Fixed Service Parameter and Return Code Defines             *          
++ *********************************************************************/         
++                                                                                
++/*  SI00 Constants                                                   */         
++                                                                                
++#define SI00CPCVARIETY_V1CPC_MACHINE   1                                        
++#define SI00CPCVARIETY_V2CPC_LPAR      2                                        
++#define SI00CPCVARIETY_V3CPC_VM        3                                        
++                                                                                
++/*  CSRSI Constants                                                  */         
++                                                                                
++#define CSRSI_REQUEST_V1CPC_MACHINE    1                                        
++#define CSRSI_REQUEST_V2CPC_LPAR       2                                        
++#define CSRSI_REQUEST_V3CPC_VM         4                                        
++                                                                                
++/*  CSRSI Return codes                                               */         
++                                                                                
++#define CSRSI_SUCCESS                  0                                        
++#define CSRSI_STSINOTAVAILABLE         4                                        
++#define CSRSI_SERVICENOTAVAILABLE      8                                        
++#define CSRSI_BADREQUEST               12                                       
++#define CSRSI_BADINFOAREALEN           16                                       
++#define CSRSI_BADLOCK                  20      
++
+diff --git a/Utilities/cmlibuv/src/unix/os390-syscalls.c b/Utilities/cmlibuv/src/unix/os390-syscalls.c
+index a74112701a..c48bc84916 100644
+--- a/Utilities/cmlibuv/src/unix/os390-syscalls.c
++++ b/Utilities/cmlibuv/src/unix/os390-syscalls.c
+@@ -27,6 +27,9 @@
+ #include <termios.h>
+ #include <sys/msg.h>
+ 
++#define CW_INTRPT 1
++#define CW_CONDVAR 32
++
+ static QUEUE global_epoll_queue;
+ static uv_mutex_t global_epoll_lock;
+ static uv_once_t once = UV_ONCE_INIT;
+@@ -137,7 +140,7 @@ static void maybe_resize(uv__os390_epoll* lst, unsigned int len) {
+ 
+ 
+ void uv__os390_cleanup(void) {
+-  msgctl(uv_backend_fd(uv_default_loop()), IPC_RMID, NULL);
++  // msgctl(uv_backend_fd(uv_default_loop()), IPC_RMID, NULL);
+ }
+ 
+ 
+@@ -149,8 +152,10 @@ static void init_message_queue(uv__os390_epoll* lst) {
+ 
+   /* initialize message queue */
+   lst->msg_queue = msgget(IPC_PRIVATE, 0600 | IPC_CREAT);
+-  if (lst->msg_queue == -1)
++  if (lst->msg_queue == -1) {
++    perror("msgget");
+     abort();
++  }
+ 
+   /*
+      On z/OS, the message queue will be affiliated with the process only
+@@ -158,12 +163,16 @@ static void init_message_queue(uv__os390_epoll* lst) {
+      can be queried for all message queues belonging to our process id.
+   */
+   msg.header = 1;
+-  if (msgsnd(lst->msg_queue, &msg, sizeof(msg.body), 0) != 0)
++  if (msgsnd(lst->msg_queue, &msg, sizeof(msg.body), 0) != 0) {
++    perror("msgsnd");
+     abort();
++  }
+ 
+   /* Clean up the dummy message sent above */
+-  if (msgrcv(lst->msg_queue, &msg, sizeof(msg.body), 0, 0) != sizeof(msg.body))
++  if (msgrcv(lst->msg_queue, &msg, sizeof(msg.body), 0, 0) != sizeof(msg.body)) {
++    perror("msgrcv");
+     abort();
++  }
+ }
+ 
+ 
+@@ -379,6 +388,61 @@ void epoll_queue_close(uv__os390_epoll* lst) {
+   lst->items = NULL;
+ }
+ 
++static char *__ptr32 *__ptr32 __uss_base_address(void) {
++  static char *__ptr32 *__ptr32 res = 0;
++  if (res == 0) {
++    res = ((char *__ptr32 *__ptr32 *__ptr32 *__ptr32 *)0)[4][136][6];
++  }
++  return res;
++}
++
++static void __bpx4ctw(unsigned int *secs, unsigned int *nsecs,
++               unsigned int *event_list, unsigned int *secs_rem,
++               unsigned int *nsecs_rem, int *return_value, int *return_code,
++               int *reason_code) {
++  void *reg15 = __uss_base_address()[492 / 4]; // BPX4CTW offset is 492
++  void *argv[] = {secs,         nsecs,       event_list, secs_rem, nsecs_rem,
++                  return_value, return_code, reason_code}; // os style parm list
++  __asm volatile(" basr 14,%0\n" : "+NR:r15"(reg15) : "NR:r1"(&argv) : "r0", "r14");
++}
++
++
++static int __cond_timed_wait(unsigned int secs, unsigned int nsecs,
++                      unsigned int event_list, unsigned int *secs_rem,
++                      unsigned int *nsecs_rem) {
++  int rv, rc, rn;
++  __bpx4ctw(&secs, &nsecs, &event_list, secs_rem, nsecs_rem, &rv, &rc, &rn);
++  if (rv != 0)
++    errno = rc;
++  return rv;
++}
++
++int nanosleep(const struct timespec* req, struct timespec* rem) {
++  unsigned secrem;
++  unsigned nanorem;
++  int rv;
++  int err;
++
++  rv = __cond_timed_wait((unsigned int)req->tv_sec, (unsigned int)req->tv_nsec,
++                         (unsigned int)(CW_CONDVAR | CW_INTRPT), &secrem,
++                         &nanorem);
++  err = errno;
++
++  if (rem != NULL && (rv == 0 || err == EINTR)) {
++    rem->tv_nsec = nanorem;
++    rem->tv_sec = secrem;
++  }
++
++  /* Don't clobber errno unless __cond_timed_wait() errored.
++   * Don't leak EAGAIN, that just means the timeout expired.
++   */
++  if (rv == -1 && err == EAGAIN) {
++    errno = 0;
++    rv = 0;
++  }
++
++  return rv;
++}
+ 
+ char* mkdtemp(char* path) {
+   static const char* tempchars =
+diff --git a/Utilities/cmlibuv/src/unix/os390-syscalls.h b/Utilities/cmlibuv/src/unix/os390-syscalls.h
+index 9f504171d8..d467af9c45 100644
+--- a/Utilities/cmlibuv/src/unix/os390-syscalls.h
++++ b/Utilities/cmlibuv/src/unix/os390-syscalls.h
+@@ -28,7 +28,6 @@
+ #include <dirent.h>
+ #include <poll.h>
+ #include <pthread.h>
+-#include "zos-base.h"
+ 
+ #define EPOLL_CTL_ADD             1
+ #define EPOLL_CTL_DEL             2
+@@ -58,6 +57,7 @@ int epoll_wait(uv__os390_epoll* ep, struct epoll_event *events, int maxevents, i
+ int epoll_file_close(int fd);
+ 
+ /* utility functions */
++int nanosleep(const struct timespec* req, struct timespec* rem);
+ int scandir(const char* maindir, struct dirent*** namelist,
+             int (*filter)(const struct dirent *),
+             int (*compar)(const struct dirent **,
+diff --git a/Utilities/cmlibuv/src/unix/os390.c b/Utilities/cmlibuv/src/unix/os390.c
+index bf0448b519..0f89ecedab 100644
+--- a/Utilities/cmlibuv/src/unix/os390.c
++++ b/Utilities/cmlibuv/src/unix/os390.c
+@@ -29,7 +29,6 @@
+ #include <termios.h>
+ #include <sys/msg.h>
+ #include <sys/resource.h>
+-#include "zos-base.h"
+ #if defined(__clang__)
+ #include "csrsic.h"
+ #else
+@@ -85,8 +84,6 @@
+ #define PGTH_CURRENT  1
+ #define PGTH_LEN      26
+ #define PGTHAPATH     0x20
+-#pragma linkage(BPX4GTH, OS)
+-#pragma linkage(BPX1GTH, OS)
+ 
+ /* TOD Clock resolution in nanoseconds */
+ #define TOD_RES 4.096
+@@ -139,11 +136,100 @@ uint64_t uv__hrtime(uv_clocktype_t type) {
+   return timestamp / TOD_RES;
+ }
+ 
++static char *__ptr32 *__ptr32 __base(void) {
++  static char *__ptr32 *__ptr32 res = 0;
++  if (res == 0) {
++    res = ((char *__ptr32 *__ptr32 *__ptr32 *__ptr32 *)0)[4][136][6];
++  }
++  return res;
++}
++
++static void __bpx4gth(int *input_length, void **input_address,
++                      int *output_length, void **output_address,
++                      int *return_value, int *return_code, int *reason_code) {
++  void *reg15 = __base()[1056 / 4];
+ 
+-static int getexe(char* buf, size_t len) {
+-  return uv__strscpy(buf, __getargv()[0], len);
++  void *argv[] = {input_length, input_address,
++                  output_length, output_address,
++                  return_value, return_code, reason_code};
++
++  __asm volatile(" basr 14,%0\n" : "+NR:r15"(reg15) : "NR:r1"(&argv) : "r0", "r14");
+ }
+ 
++/*
++    Get the exe path using the thread entry information
++    in the address space.
++*/
++static int getexe(const int pid, char* buf, size_t len) {
++  struct {
++    int pid;
++    int thid[2];
++    char accesspid;
++    char accessthid;
++    char asid[2];
++    char loginname[8];
++    char flag;
++    char len;
++  } Input_data;
++  union {
++    struct {
++      char gthb[4];
++      int pid;
++      int thid[2];
++      char accesspid;
++      char accessthid[3];
++      int lenused;
++      int offsetProcess;
++      int offsetConTTY;
++      int offsetPath;
++      int offsetCommand;
++      int offsetFileData;
++      int offsetThread;
++    } Output_data;
++    char buf[2048];
++  } Output_buf;
++  struct Output_path_type {
++    char gthe[4];
++    short int len;
++    char path[1024];
++  };
++  int Input_length;
++  int Output_length;
++  void* Input_address;
++  void* Output_address;
++  struct Output_path_type* Output_path;
++  int rv;
++  int rc;
++  int rsn;
++  Input_length = PGTH_LEN;
++  Output_length = sizeof(Output_buf);
++  Output_address = &Output_buf;
++  Input_address = &Input_data;
++  memset(&Input_data, 0, sizeof Input_data);
++  Input_data.flag |= PGTHAPATH;
++  Input_data.pid = pid;
++  Input_data.accesspid = PGTH_CURRENT;
++
++  __bpx4gth(&Input_length, &Input_address,
++          &Output_length, &Output_address,
++          &rv, &rc, &rsn);
++
++  if (rv == -1) {
++    errno = rc;
++    return -1;
++  }
++  /* Check highest byte to ensure data availability */
++  assert(((Output_buf.Output_data.offsetPath >>24) & 0xFF) == 'A');
++  /* Get the offset from the lowest 3 bytes */
++  Output_path = (struct Output_path_type*) ((char*) (&Output_buf) +
++      (Output_buf.Output_data.offsetPath & 0x00FFFFFF));
++  if (Output_path->len >= len) {
++    errno = ENOBUFS;
++    return -1;
++  }
++  uv__strscpy(buf, Output_path->path, len);
++  return 0;
++}
+ 
+ /*
+  * We could use a static buffer for the path manipulations that we need outside
+@@ -161,7 +247,8 @@ int uv_exepath(char* buffer, size_t* size) {
+   if (buffer == NULL || size == NULL || *size == 0)
+     return UV_EINVAL;
+ 
+-  res = getexe(args, sizeof(args));
++  pid = getpid();
++  res = getexe(pid, args, sizeof(args));
+   if (res < 0)
+     return UV_EINVAL;
+ 
+@@ -875,3 +962,6 @@ int uv__io_fork(uv_loop_t* loop) {
+   uv__platform_loop_delete(loop);
+   return uv__platform_loop_init(loop);
+ }
++
++void uv__process_title_cleanup(void) {
++}
+diff --git a/Utilities/cmlibuv/src/unix/posix-hrtime.c b/Utilities/cmlibuv/src/unix/posix-hrtime.c
+index 870b45c76c..08fb49170a 100644
+--- a/Utilities/cmlibuv/src/unix/posix-hrtime.c
++++ b/Utilities/cmlibuv/src/unix/posix-hrtime.c
+@@ -57,6 +57,23 @@ uint64_t uv__hrtime(uv_clocktype_t type) {
+   return (uint64_t) gethrtime();
+ }
+ 
++#elif defined(__MVS__)
++/* Special case for CMake bootstrap: no clock_gettime or CLOCK_MONOTONIC on z/OS */
++
++#ifndef CMAKE_BOOTSTRAP
++#error "This code path meant only for use during CMake bootstrap."
++#endif
++
++/* TOD Clock resolution in nanoseconds */
++#define TOD_RES 4.096
++
++uint64_t uv__hrtime(uv_clocktype_t type) {
++  unsigned long long timestamp;
++  __stckf(&timestamp);
++  /* Convert to nanoseconds */
++  return timestamp / TOD_RES;
++}
++
+ #else
+ 
+ #include <stdint.h>
+diff --git a/Utilities/cmlibuv/src/unix/process.c b/Utilities/cmlibuv/src/unix/process.c
+index 2af2088f90..10384a5d82 100644
+--- a/Utilities/cmlibuv/src/unix/process.c
++++ b/Utilities/cmlibuv/src/unix/process.c
+@@ -46,10 +46,6 @@ extern char **environ;
+ # include <grp.h>
+ #endif
+ 
+-#if defined(__MVS__)
+-# include "zos-base.h"
+-#endif
+-
+ #ifndef CMAKE_BOOTSTRAP
+ #if defined(__linux__)
+ # define uv__cpu_set_t cpu_set_t
+@@ -370,11 +366,7 @@ static void uv__process_child_init(const uv_process_options_t* options,
+   if (sigprocmask(SIG_SETMASK, &signewset, NULL) != 0)
+     abort();
+ 
+-#ifdef __MVS__
+-  execvpe(options->file, options->args, environ);
+-#else
+   execvp(options->file, options->args);
+-#endif
+ 
+   uv__write_errno(error_fd);
+   abort();
+diff --git a/Utilities/cmzlib/zconf.h b/Utilities/cmzlib/zconf.h
+index 1790072cf7..afbe26230f 100644
+--- a/Utilities/cmzlib/zconf.h
++++ b/Utilities/cmzlib/zconf.h
+@@ -516,21 +516,4 @@ typedef uLong FAR uLongf;
+ #  endif
+ #endif
+ 
+-/* MVS linker does not support external names larger than 8 bytes */
+-#if defined(__MVS__)
+-  #pragma map(deflateInit_,"DEIN")
+-  #pragma map(deflateInit2_,"DEIN2")
+-  #pragma map(deflateEnd,"DEEND")
+-  #pragma map(deflateBound,"DEBND")
+-  #pragma map(inflateInit_,"ININ")
+-  #pragma map(inflateInit2_,"ININ2")
+-  #pragma map(inflateEnd,"INEND")
+-  #pragma map(inflateSync,"INSY")
+-  #pragma map(inflateSetDictionary,"INSEDI")
+-  #pragma map(compressBound,"CMBND")
+-  #pragma map(inflate_table,"INTABL")
+-  #pragma map(inflate_fast,"INFA")
+-  #pragma map(inflate_copyright,"INCOPY")
+-#endif
+-
+ #endif /* ZCONF_H */
+diff --git a/Utilities/cmzstd/lib/common/zstd_trace.h b/Utilities/cmzstd/lib/common/zstd_trace.h
+index 485cadf7c4..c176a3740f 100644
+--- a/Utilities/cmzstd/lib/common/zstd_trace.h
++++ b/Utilities/cmzstd/lib/common/zstd_trace.h
+@@ -20,7 +20,7 @@ extern "C" {
+ /* weak symbol support */
+ #if !defined(ZSTD_HAVE_WEAK_SYMBOLS) && defined(__GNUC__) && \
+     !defined(__APPLE__) && !defined(_WIN32) && !defined(__MINGW32__) && \
+-    !defined(__CYGWIN__) && !defined(_AIX)
++    !defined(__CYGWIN__) && !defined(_AIX) && !defined(__MVS__)
+ #  define ZSTD_HAVE_WEAK_SYMBOLS 1
+ #else
+ #  define ZSTD_HAVE_WEAK_SYMBOLS 0
+diff --git a/bootstrap b/bootstrap
+index 9a87413984..0839d2ecc5 100755
+--- a/bootstrap
++++ b/bootstrap
+@@ -171,6 +171,13 @@ else
+   cmake_system_linux=false
+ fi
+ 
++# Determine whether this is z/OS
++if echo "${cmake_system}" | grep OS/390 >/dev/null 2>&1; then
++  cmake_system_zos=true
++else
++  cmake_system_zos=false
++ fi
++
+ # Determine whether this is a PA-RISC machine
+ # This only works for Linux or HP-UX, not other PA-RISC OSs (BSD maybe?). Also
+ # may falsely detect parisc on HP-UX m68k
+@@ -637,6 +644,14 @@ else
+     "
+ fi
+ 
++if ${cmake_system_zos}; then
++  LIBUV_C_SOURCES="${LIBUV_C_SOURCES}\
++    src/unix/os390-syscalls.c \
++    src/unix/pthread-fixes.c \
++    src/unix/os390-proctitle.c \
++  "
++fi
++
+ # Display CMake bootstrap usage
+ cmake_usage()
+ {
+@@ -1134,6 +1149,7 @@ case "${cmake_system}" in
+   *Darwin*) cmake_toolchains='Clang GNU' ;;
+   *Linux*) cmake_toolchains='GNU Clang XL PGI PathScale' ;;
+   *MINGW*) cmake_toolchains='GNU' ;;
++  *OS/390*) cmake_toolchains='Clang z/OS' ;;
+ esac
+ 
+ # Toolchain compiler name table.
+@@ -1726,6 +1742,12 @@ else
+       uv_c_flags="${uv_c_flags} -D_XOPEN_SOURCE=700"
+       libs="${libs} -lsocket"
+       ;;
++    *OS/390*)
++      uv_c_flags="${uv_c_flags} -D_XOPEN_SOURCE=600 -DPATH_MAX=1024 -D_AE_BIMODAL -D_ALL_SOURCE \
++                  -D_ISOC99_SOURCE -D_LARGE_TIME_API -D_OPEN_MSGQ_EXT -D_OPEN_SYS_FILE_EXT -D_OPEN_SYS_IF_EXT \
++                  -D_OPEN_SYS_SOCK_EXT3 -D_OPEN_SYS_SOCK_IPV6 -D_UNIX03_SOURCE -D_UNIX03_THREADS -D_UNIX03_WITHDRAWN \
++                  -D_XOPEN_SOURCE_EXTENDED"
++      ;;
+   esac
+ fi
+ if test "x${bootstrap_system_libuv}" = "x"; then

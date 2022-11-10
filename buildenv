@@ -3,14 +3,29 @@ export ZOPEN_EXTRA_CXXFLAGS="-qNOASCII -qNOOPT"
 export ZOPEN_EXTRA_CFLAGS="-qNOASCII -qNOOPT"
 export ZOPEN_BOOTSTRAP_OPTS="--prefix=\${ZOPEN_INSTALL_DIR} -- -DCMAKE_BUILD_TYPE=None -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON"
 export ZOPEN_CONFIGURE="skip"
-export ZOPEN_CHECK="skip"
 
 export ZOPEN_GIT_URL="https://github.com/Kitware/CMake.git"
 export ZOPEN_GIT_DEPS="git make"
-export ZOPEN_GIT_TAG="v3.18.0"
+export ZOPEN_GIT_TAG="v3.24.2"
+
+gitname=$(basename "$ZOPEN_GIT_URL")
+code_dir="${ZOPEN_ROOT}/${gitname%%.*}"
+export ZOPEN_CHECK="${code_dir}/bin/ctest"
+export ZOPEN_CHECK_OPTS=" "
+
 
 zopen_check_results()
 {
-  #TODO
+    chk="$1/$2_check.log"
+    # grep and parse test summary line, e.g, "75% tests passed, 150 tests failed out of 596"
+    nums=$(egrep "% tests passed" "${chk}" | tr '\n' ' ' | sed -e 's/[^0-9]/ /g' -e 's/^ *//g' -e 's/ *$//g' | tr -s ' ')
+    totalTests=$( echo $nums | awk '{print $3}')
+    failures=$( echo $nums | awk '{print $2}')
+
+cat <<TEST
+actualFailures:$failures
+totalTests:$totalTests
+expectedFailures:150
+TEST
 }
 
