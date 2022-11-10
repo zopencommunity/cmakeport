@@ -3,6 +3,7 @@ export ZOPEN_EXTRA_CXXFLAGS="-qNOASCII -qNOOPT"
 export ZOPEN_EXTRA_CFLAGS="-qNOASCII -qNOOPT"
 export ZOPEN_BOOTSTRAP_OPTS="--prefix=\${ZOPEN_INSTALL_DIR} -- -DCMAKE_BUILD_TYPE=None -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON"
 export ZOPEN_CONFIGURE="skip"
+export ZOPEN_CHECK_TIMEOUT=25000 # ~ 7 hrs
 
 export ZOPEN_GIT_URL="https://github.com/Kitware/CMake.git"
 export ZOPEN_GIT_DEPS="git make"
