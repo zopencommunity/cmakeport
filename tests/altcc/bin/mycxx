@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "My C++ compiler options: $@" >>/tmp/cxx.out 2>&1 
+xlclang++ $@

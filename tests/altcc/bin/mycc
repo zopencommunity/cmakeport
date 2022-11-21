@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "My C compiler options: $@" >>/tmp/c.out 2>&1
+xlclang $@

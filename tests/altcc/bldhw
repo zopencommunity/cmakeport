@@ -1,0 +1,7 @@
+#!/bin/sh
+mydir=$(cd $(dirname $0) && echo ${PWD})
+export CC="${mydir}/bin/mycc"
+export CXX="${mydir}/bin/mycxx"
+mkdir -p build
+cd build
+cmake -D CMAKE_C_COMPILER=${CC} -D CMAKE_CXX_COMPILER=${CXX} .. && cmake --build .
