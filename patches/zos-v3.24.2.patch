@@ -15,10 +15,25 @@ index e6fb20b500..3cd67513db 100644
    if(NOT CMAKE_COMPILER_IS_GNUCXX)
      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -timplicit_local -no_implicit_include ")
 diff --git a/Modules/CMakeDetermineCCompiler.cmake b/Modules/CMakeDetermineCCompiler.cmake
-index f5298dff46..0774f9c61d 100644
+index f5298dff46..39ef1d821e 100644
 --- a/Modules/CMakeDetermineCCompiler.cmake
 +++ b/Modules/CMakeDetermineCCompiler.cmake
-@@ -178,7 +178,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+@@ -93,7 +93,13 @@ else()
+     )
+ endif()
+ if(CMAKE_C_COMPILER_TARGET)
+-  set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "-c --target=${CMAKE_C_COMPILER_TARGET}")
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    # z/OS object files sometimes don't have continuous string literals, therefore
++    # leads to some compiler info not being correctly parsed, so we should not use -c.
++    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "--target=${CMAKE_C_COMPILER_TARGET}")
++  else()
++    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "-c --target=${CMAKE_C_COMPILER_TARGET}")
++  endif()
+ endif()
+ # Build a small source file to identify the compiler.
+ if(NOT CMAKE_C_COMPILER_ID_RUN)
+@@ -178,7 +184,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
  
      # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
      # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
@@ -29,10 +44,25 @@ index f5298dff46..0774f9c61d 100644
      endif ()
    elseif(CMAKE_C_COMPILER_ID MATCHES "TI")
 diff --git a/Modules/CMakeDetermineCXXCompiler.cmake b/Modules/CMakeDetermineCXXCompiler.cmake
-index fd3d028be2..6f2b5ccbe9 100644
+index fd3d028be2..eba533459c 100644
 --- a/Modules/CMakeDetermineCXXCompiler.cmake
 +++ b/Modules/CMakeDetermineCXXCompiler.cmake
-@@ -177,7 +177,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+@@ -89,7 +89,13 @@ else()
+ endif()
+ 
+ if(CMAKE_CXX_COMPILER_TARGET)
+-  set(CMAKE_CXX_COMPILER_ID_TEST_FLAGS_FIRST "-c --target=${CMAKE_CXX_COMPILER_TARGET}")
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    # z/OS object files sometimes don't have continuous string literals, therefore
++    # leads to some compiler info not being correctly parsed, so we should not use -c.
++    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "--target=${CMAKE_C_COMPILER_TARGET}")
++  else()
++    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "-c --target=${CMAKE_C_COMPILER_TARGET}")
++  endif()
+ endif()
+ 
+ # Build a small source file to identify the compiler.
+@@ -177,7 +183,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
  
      # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
      # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
