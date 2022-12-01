@@ -1,6 +1,6 @@
 diff --git a/Modules/CMakeTestPLICompiler.cmake b/Modules/CMakeTestPLICompiler.cmake
 new file mode 100644
-index 0000000000..465296dafb
+index 0000000000..797673a53a
 --- /dev/null
 +++ b/Modules/CMakeTestPLICompiler.cmake
 @@ -0,0 +1,78 @@
@@ -23,7 +23,7 @@ index 0000000000..465296dafb
 +
 +# Try to identify the ABI and configure it into CMakePLICompiler.cmake
 +include(${CMAKE_ROOT}/Modules/CMakeDetermineCompilerABI.cmake)
-+CMAKE_DETERMINE_COMPILER_ABI(PLI ${CMAKE_ROOT}/Modules/CMakePLICompilerABI.F90)
++CMAKE_DETERMINE_COMPILER_ABI(PLI ${CMAKE_ROOT}/Modules/CMakePLICompilerABI.pli)
 +if(CMAKE_PLI_ABI_COMPILED)
 +  # The compiler worked so skip dedicated test below.
 +  set(CMAKE_PLI_COMPILER_WORKS TRUE)
