@@ -1,6 +1,6 @@
 diff --git a/Modules/CMakePLIInformation.cmake b/Modules/CMakePLIInformation.cmake
 new file mode 100644
-index 0000000000..89986214b9
+index 0000000000..9e2e106fbe
 --- /dev/null
 +++ b/Modules/CMakePLIInformation.cmake
 @@ -0,0 +1,145 @@
@@ -132,7 +132,7 @@ index 0000000000..89986214b9
 +# compile a PLI file into an object file
 +if(NOT CMAKE_PLI_COMPILE_OBJECT)
 +  set(CMAKE_PLI_COMPILE_OBJECT
-+    "<CMAKE_PLI_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -c -o <OBJECT> <SOURCE>")
++    "<CMAKE_PLI_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -c <SOURCE>")
 +endif()
 +
 +# link a PLI program
