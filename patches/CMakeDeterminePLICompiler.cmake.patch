@@ -1,9 +1,9 @@
 diff --git a/Modules/CMakeDeterminePLICompiler.cmake b/Modules/CMakeDeterminePLICompiler.cmake
 new file mode 100644
-index 0000000000..039922733c
+index 0000000000..36774d16a3
 --- /dev/null
 +++ b/Modules/CMakeDeterminePLICompiler.cmake
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,113 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
 +
@@ -22,57 +22,56 @@ index 0000000000..039922733c
 +  set(CMAKE_PLI_COMPILER_NAMES pli)
 +endif()
 +
-+  if(NOT CMAKE_PLI_COMPILER)
-+    # prefer the environment variable PC
-+    if(NOT $ENV{PC} STREQUAL "")
-+      get_filename_component(CMAKE_PLI_COMPILER_INIT $ENV{PC} PROGRAM PROGRAM_ARGS CMAKE_PLI_FLAGS_ENV_INIT)
-+      if(CMAKE_PLI_FLAGS_ENV_INIT)
-+        set(CMAKE_PLI_COMPILER_ARG1 "${CMAKE_PLI_FLAGS_ENV_INIT}" CACHE STRING "Arguments to PLI compiler")
-+      endif()
-+      if(EXISTS ${CMAKE_PLI_COMPILER_INIT})
-+      else()
-+        message(FATAL_ERROR "Could not find compiler set in environment variable PC:\n$ENV{PC}.")
-+      endif()
++if(NOT CMAKE_PLI_COMPILER)
++  # prefer the environment variable PC
++  if(NOT $ENV{PC} STREQUAL "")
++    get_filename_component(CMAKE_PLI_COMPILER_INIT $ENV{PC} PROGRAM PROGRAM_ARGS CMAKE_PLI_FLAGS_ENV_INIT)
++    if(CMAKE_PLI_FLAGS_ENV_INIT)
++      set(CMAKE_PLI_COMPILER_ARG1 "${CMAKE_PLI_FLAGS_ENV_INIT}" CACHE STRING "Arguments to PLI compiler")
 +    endif()
-+
-+    # next try prefer the compiler specified by the generator
-+    if(CMAKE_GENERATOR_PC)
-+      if(NOT CMAKE_PLI_COMPILER_INIT)
-+        set(CMAKE_PLI_COMPILER_INIT ${CMAKE_GENERATOR_PC})
-+      endif()
++    if(EXISTS ${CMAKE_PLI_COMPILER_INIT})
++    else()
++      message(FATAL_ERROR "Could not find compiler set in environment variable PC:\n$ENV{PC}.")
 +    endif()
-+
-+    # finally list compilers to try
-+    if(NOT CMAKE_PLI_COMPILER_INIT)
-+      # Known compilers:
-+      #  pli: generic compiler names
-+        set(CMAKE_PLI_COMPILER_LIST
-+          pli
-+          )
-+
-+      # Vendor-specific compiler names.
-+      set(_PLI_COMPILER_NAMES_ZOS       pli)
-+    endif()
-+
-+    _cmake_find_compiler(PLI)
-+
-+  else()
-+    _cmake_find_compiler_path(PLI)
 +  endif()
-+  mark_as_advanced(CMAKE_PLI_COMPILER)
 +
-+  # Each entry in this list is a set of extra flags to try
-+  # adding to the compile line to see if it helps produce
-+  # a valid identification executable.
-+  set(CMAKE_PLI_COMPILER_ID_TEST_FLAGS_FIRST
-+    # Get verbose output to help distinguish compilers.
-+    "-v"
-+    )
-+  set(CMAKE_PLI_COMPILER_ID_TEST_FLAGS
-+    # Try compiling to an object file only.
-+    "-c"
-+    )
++  # next try prefer the compiler specified by the generator
++  if(CMAKE_GENERATOR_PC)
++    if(NOT CMAKE_PLI_COMPILER_INIT)
++      set(CMAKE_PLI_COMPILER_INIT ${CMAKE_GENERATOR_PC})
++    endif()
++  endif()
++
++  # finally list compilers to try
++  if(NOT CMAKE_PLI_COMPILER_INIT)
++    # Known compilers:
++    #  pli: generic compiler names
++      set(CMAKE_PLI_COMPILER_LIST
++        pli
++        )
++
++    # Vendor-specific compiler names.
++    set(_PLI_COMPILER_NAMES_ZOS       pli)
++  endif()
++
++  _cmake_find_compiler(PLI)
++
++else()
++  _cmake_find_compiler_path(PLI)
 +endif()
++mark_as_advanced(CMAKE_PLI_COMPILER)
++
++# Each entry in this list is a set of extra flags to try
++# adding to the compile line to see if it helps produce
++# a valid identification executable.
++set(CMAKE_PLI_COMPILER_ID_TEST_FLAGS_FIRST
++  # Get verbose output to help distinguish compilers.
++  "-v"
++  )
++set(CMAKE_PLI_COMPILER_ID_TEST_FLAGS
++  # Try compiling to an object file only.
++  "-c"
++  )
 +
 +# Build a small source file to identify the compiler.
 +if(NOT CMAKE_PLI_COMPILER_ID_RUN)
@@ -83,7 +82,7 @@ index 0000000000..039922733c
 +  set(CMAKE_PLI_COMPILER_ID_VENDOR_FLAGS_IBM "-v")
 +  set(CMAKE_PLI_COMPILER_ID_VENDOR_REGEX_IBM "15655-PL[.]*")
 +
-+  string(APPEND _version_info "6.1"
++  string(APPEND _version_info "6.1")
 +  unset(_version_info)
 +
 +endif ()
