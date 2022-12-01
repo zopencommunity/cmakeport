@@ -1,9 +1,9 @@
 diff --git a/Modules/CMakePLIInformation.cmake b/Modules/CMakePLIInformation.cmake
 new file mode 100644
-index 0000000000..9e2e106fbe
+index 0000000000..f486b280ea
 --- /dev/null
 +++ b/Modules/CMakePLIInformation.cmake
-@@ -0,0 +1,145 @@
+@@ -0,0 +1,167 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
 +
@@ -15,6 +15,8 @@ index 0000000000..9e2e106fbe
 +# if it exists.
 +
 +set(_INCLUDED_FILE 0)
++
++set(CMAKE_PLI_OUTPUT_EXTENSION .o)
 +
 +# Load compiler-specific information.
 +if(CMAKE_PLI_COMPILER_ID)
@@ -101,10 +103,30 @@ index 0000000000..9e2e106fbe
 +include(CMakeCommonLanguageInclude)
 +
 +# now define the following rule variables
++
 +# CMAKE_PLI_CREATE_SHARED_LIBRARY
 +# CMAKE_PLI_CREATE_SHARED_MODULE
 +# CMAKE_PLI_COMPILE_OBJECT
 +# CMAKE_PLI_LINK_EXECUTABLE
++
++# variables supplied by the generator at use time
++# <TARGET>
++# <TARGET_BASE> the target without the suffix
++# <OBJECTS>
++# <OBJECT>
++# <LINK_LIBRARIES>
++# <FLAGS>
++# <LINK_FLAGS>
++
++# PLI compiler information
++# <CMAKE_PLI_COMPILER>
++# <CMAKE_SHARED_LIBRARY_CREATE_PLI_FLAGS>
++# <CMAKE_SHARED_MODULE_CREATE_PLI_FLAGS>
++# <CMAKE_PLI_LINK_FLAGS>
++
++# Static library tools
++# <CMAKE_AR>
++# <CMAKE_RANLIB>
 +
 +# create a PLI shared library
 +if(NOT CMAKE_PLI_CREATE_SHARED_LIBRARY)
@@ -132,7 +154,7 @@ index 0000000000..9e2e106fbe
 +# compile a PLI file into an object file
 +if(NOT CMAKE_PLI_COMPILE_OBJECT)
 +  set(CMAKE_PLI_COMPILE_OBJECT
-+    "<CMAKE_PLI_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -c <SOURCE>")
++    "<CMAKE_PLI_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>")
 +endif()
 +
 +# link a PLI program
