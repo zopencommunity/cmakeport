@@ -1,0 +1,17 @@
+diff --git a/Modules/Compiler/pli.cmake b/Modules/Compiler/pli.cmake
+new file mode 100644
+index 0000000000..091f6fc933
+--- /dev/null
++++ b/Modules/Compiler/pli.cmake
+@@ -0,0 +1,11 @@
++__compiler_ibmpli(PLI)
++
++set(CMAKE_C_COMPILE_OPTIONS_EXPLICIT_LANGUAGE -x c)
++
++if((NOT DEFINED CMAKE_DEPENDS_USE_COMPILER OR CMAKE_DEPENDS_USE_COMPILER)
++    AND CMAKE_GENERATOR MATCHES "Makefiles|WMake"
++    AND CMAKE_DEPFILE_FLAGS_PLI)
++  # dependencies are computed by the compiler itself
++  set(CMAKE_PLI_DEPFILE_FORMAT gcc)
++  set(CMAKE_PLI_DEPENDS_USE_COMPILER TRUE)
++endif()
