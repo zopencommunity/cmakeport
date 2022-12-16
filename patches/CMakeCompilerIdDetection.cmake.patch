@@ -1,0 +1,13 @@
+diff --git a/Modules/CMakeCompilerIdDetection.cmake b/Modules/CMakeCompilerIdDetection.cmake
+index f15974ae01..8a18ac9610 100644
+--- a/Modules/CMakeCompilerIdDetection.cmake
++++ b/Modules/CMakeCompilerIdDetection.cmake
+@@ -14,7 +14,7 @@ endfunction()
+ function(compiler_id_detection outvar lang)
+ 
+   if (NOT "x${lang}" STREQUAL "xFortran" AND NOT "x${lang}" STREQUAL "xCSharp"
+-      AND NOT "x${lang}" STREQUAL "xISPC")
++      AND NOT "x${lang}" STREQUAL "xISPC" AND NOT "x${lang}" STREQUAL "xPLI")
+     file(GLOB lang_files
+       "${CMAKE_ROOT}/Modules/Compiler/*-DetermineCompiler.cmake")
+     set(nonlang CXX)

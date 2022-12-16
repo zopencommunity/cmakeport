@@ -1,9 +1,9 @@
 diff --git a/Modules/CMakePLIInformation.cmake b/Modules/CMakePLIInformation.cmake
 new file mode 100644
-index 0000000000..f486b280ea
+index 0000000000..de01b148b6
 --- /dev/null
 +++ b/Modules/CMakePLIInformation.cmake
-@@ -0,0 +1,167 @@
+@@ -0,0 +1,168 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
 +
@@ -17,6 +17,7 @@ index 0000000000..f486b280ea
 +set(_INCLUDED_FILE 0)
 +
 +set(CMAKE_PLI_OUTPUT_EXTENSION .o)
++set(CMAKE_INCLUDE_FLAG_PLI "-I")
 +
 +# Load compiler-specific information.
 +if(CMAKE_PLI_COMPILER_ID)
