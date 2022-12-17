@@ -1,9 +1,10 @@
 diff --git a/Modules/Compiler/zOS-PLI.cmake b/Modules/Compiler/zOS-PLI.cmake
 new file mode 100644
-index 0000000000..091f6fc933
+index 0000000000..f4484446d1
 --- /dev/null
 +++ b/Modules/Compiler/zOS-PLI.cmake
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,12 @@
++include(Compiler/zOS)
 +__compiler_ibmpli(PLI)
 +
 +set(CMAKE_C_COMPILE_OPTIONS_EXPLICIT_LANGUAGE -x c)

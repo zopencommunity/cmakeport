@@ -1,9 +1,9 @@
 diff --git a/Modules/CMakeDeterminePLICompiler.cmake b/Modules/CMakeDeterminePLICompiler.cmake
 new file mode 100644
-index 0000000000..36774d16a3
+index 0000000000..cb3fada565
 --- /dev/null
 +++ b/Modules/CMakeDeterminePLICompiler.cmake
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,116 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
 +
@@ -83,6 +83,9 @@ index 0000000000..36774d16a3
 +  set(CMAKE_PLI_COMPILER_ID_VENDOR_REGEX_IBM "15655-PL[.]*")
 +
 +  string(APPEND _version_info "6.1")
++
++  include(${CMAKE_ROOT}/Modules/CMakeDetermineCompilerId.cmake)
++
 +  unset(_version_info)
 +
 +endif ()

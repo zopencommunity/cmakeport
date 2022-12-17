@@ -2,3 +2,4 @@ CMake
 log
 install
 nohup.out
+tests/build
