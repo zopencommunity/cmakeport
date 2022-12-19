@@ -1,9 +1,9 @@
 diff --git a/Modules/CMakeDeterminePLICompiler.cmake b/Modules/CMakeDeterminePLICompiler.cmake
 new file mode 100644
-index 0000000000..cb3fada565
+index 0000000000..0c121e7a7e
 --- /dev/null
 +++ b/Modules/CMakeDeterminePLICompiler.cmake
-@@ -0,0 +1,116 @@
+@@ -0,0 +1,127 @@
 +# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
 +# file Copyright.txt or https://cmake.org/licensing for details.
 +
@@ -77,14 +77,18 @@ index 0000000000..cb3fada565
 +if(NOT CMAKE_PLI_COMPILER_ID_RUN)
 +  set(CMAKE_PLI_COMPILER_ID_RUN 1)
 +
++
 +  # Table of per-vendor compiler id flags with expected output.
 +  list(APPEND CMAKE_PLI_COMPILER_ID_VENDORS IBM)
 +  set(CMAKE_PLI_COMPILER_ID_VENDOR_FLAGS_IBM "-v")
 +  set(CMAKE_PLI_COMPILER_ID_VENDOR_REGEX_IBM "15655-PL[.]*")
++  list(APPEND CMAKE_PLI_COMPILER_ID_MATCH_VENDORS "${CMAKE_PLI_COMPILER_ID_VENDORS}")
++  set(CMAKE_PLI_COMPILER_ID_MATCH_VENDOR_REGEX_IBM "${CMAKE_PLI_COMPILER_ID_VENDOR_REGEX_IBM}")
 +
 +  string(APPEND _version_info "6.1")
 +
 +  include(${CMAKE_ROOT}/Modules/CMakeDetermineCompilerId.cmake)
++  CMAKE_DETERMINE_COMPILER_ID(PLI PLIFLAGS CMakePLICompilerId.pli)
 +
 +  unset(_version_info)
 +
@@ -108,6 +112,13 @@ index 0000000000..cb3fada565
 +    "set(CMAKE_PLI_COMPILER_ARCHITECTURE_ID ${CMAKE_PLI_COMPILER_ARCHITECTURE_ID})")
 +else()
 +  set(_SET_CMAKE_PLI_COMPILER_ARCHITECTURE_ID "")
++endif()
++
++if(CMAKE_PLI_COMPILER_ID)
++  set(_SET_CMAKE_PLI_COMPILER_ID
++    "set(CMAKE_PLI_COMPILER_ID ${CMAKE_PLI_COMPILER_ID})")
++else()
++  set(_SET_CMAKE_PLI_COMPILER_ID "")
 +endif()
 +
 +if(MSVC_PLI_ARCHITECTURE_ID)
