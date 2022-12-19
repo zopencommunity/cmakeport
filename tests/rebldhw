@@ -2,4 +2,4 @@
 mydir=$(cd $(dirname $0) && echo $PWD)
 
 export PATH="${mydir}":"${mydir}/../CMake/bin":${PATH}
-cd build && cmake --build .
+cd build && ninja
