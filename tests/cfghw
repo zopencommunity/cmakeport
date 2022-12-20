@@ -1,7 +1,5 @@
 #!/bin/sh
-mydir=$(cd $(dirname $0) && echo $PWD)
 export CC=clang
-#export CFLAGS="-I${mydir}/include"
 export CMAKE=cmake
 export NINJA=ninja
 
