@@ -1,11 +1,10 @@
 #!/bin/sh
-mydir=$(cd $(dirname $0) && echo $PWD)
-export CC=xlclang
-export CFLAGS="-I${mydir}/include"
-
-export PATH="${mydir}":"${mydir}/../CMake/bin":${PATH}
-rm -rf build
-mkdir -p build
-cd build
-#cmake --trace -D CMAKE_C_COMPILER=${CC} -G Ninja .. && ninja
-cmake -D CMAKE_C_COMPILER=${CC} -G Ninja .. && ninja
+#
+# Build 'hw' using the configured ninja build from 'cfghw'
+#
+export NINJA=ninja
+if ! ${NINJA} --version ; then
+  echo "Unable to find ${NINJA}" >&2
+  exit 4
+fi
+cd build && ninja

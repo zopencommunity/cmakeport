@@ -1,1 +1,1 @@
-int hw();
+int hw(int);
