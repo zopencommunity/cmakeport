@@ -1,6 +1,6 @@
 diff --git a/Modules/Compiler/IBM-PLI.cmake b/Modules/Compiler/IBM-PLI.cmake
 new file mode 100644
-index 0000000000..e5c59869b4
+index 0000000000..19ff0a25c7
 --- /dev/null
 +++ b/Modules/Compiler/IBM-PLI.cmake
 @@ -0,0 +1,10 @@
@@ -12,5 +12,5 @@ index 0000000000..e5c59869b4
 +  # this needs to likely be changed to 6.x not 6.1
 +  set(CMAKE_PLI_DEPFILE_FORMAT gcc)
 +  set(CMAKE_PLI_DEPENDS_USE_COMPILER TRUE)
-+  set(CMAKE_DEPFILE_FLAGS_PLI -MD -MT <DEP_TARGET> -MF <DEP_FILE>)
++  set(CMAKE_DEPFILE_FLAGS_PLI "-MD -MT <DEP_TARGET> -MF <DEP_FILE>")
 +endif()
