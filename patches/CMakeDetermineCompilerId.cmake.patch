@@ -1,16 +1,11 @@
 diff --git a/Modules/CMakeDetermineCompilerId.cmake b/Modules/CMakeDetermineCompilerId.cmake
-index ce97b14cb5..7dd72e9126 100644
+index 2b19736d47..7dd72e9126 100644
 --- a/Modules/CMakeDetermineCompilerId.cmake
 +++ b/Modules/CMakeDetermineCompilerId.cmake
-@@ -5,11 +5,13 @@ macro(__determine_compiler_id_test testflags_var userflags_var)
+@@ -5,6 +5,13 @@ macro(__determine_compiler_id_test testflags_var userflags_var)
    separate_arguments(testflags UNIX_COMMAND "${${testflags_var}}")
    CMAKE_DETERMINE_COMPILER_ID_BUILD("${lang}" "${testflags}" "${${userflags_var}}" "${src}")
    CMAKE_DETERMINE_COMPILER_ID_MATCH_VENDOR("${lang}" "${COMPILER_${lang}_PRODUCED_OUTPUT}")
--  if(CMAKE_${lang}_COMPILER_ID_MATCH_VERSION_REGEX_${vendor})
--    if(${COMPILER_${lang}_PRODUCED_OUTPUT} MATCHES ${CMAKE}_${lang}_COMPILER_ID_MATCH_VERSION_REGEX_${vendor}})
--      set(CMAKE_${lang}_COMPILER_VERSION "${CMAKE_MATCH_3}")
--    endif()
--  endif()
 +  foreach(vendor ${CMAKE_${lang}_COMPILER_ID_MATCH_VENDORS})
 +#    if(${CMAKE_${lang}_COMPILER_ID_MATCH_VERSION_REGEX_${vendor}})
 +      if(${COMPILER_${lang}_PRODUCED_OUTPUT} MATCHES ${CMAKE_${lang}_COMPILER_ID_MATCH_VERSION_REGEX_${vendor}})
@@ -21,12 +16,15 @@ index ce97b14cb5..7dd72e9126 100644
  
    if(NOT CMAKE_${lang}_COMPILER_ID)
      foreach(file ${COMPILER_${lang}_PRODUCED_FILES})
-@@ -1058,8 +1060,6 @@ endfunction()
- # matching its regular expression in the output.
- function(CMAKE_DETERMINE_COMPILER_ID_VENDOR lang userflags)
+@@ -32,6 +39,11 @@ function(CMAKE_DETERMINE_COMPILER_ID lang flagvar src)
+   endif()
+   string(REPLACE " " ";" CMAKE_${lang}_COMPILER_ID_FLAGS_LIST "${CMAKE_${lang}_COMPILER_ID_FLAGS}")
  
--  set(CMAKE_${lang}_COMPILER_PRINT "${userflags}")
--
-   if(NOT CMAKE_${lang}_COMPILER_ID_DIR)
-     # We get here when this function is called not from within CMAKE_DETERMINE_COMPILER_ID()
-     # This is done e.g. for detecting the compiler ID for assemblers.
++  # Drop qASCII Flag for z/OS for correct encoding of string literals.
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    string(REGEX REPLACE "-(qASCII|qascii|fzos-le-char-mode=ascii);?" "" CMAKE_${lang}_COMPILER_ID_FLAGS_LIST "${CMAKE_${lang}_COMPILER_ID_FLAGS_LIST}")
++  endif()
++
+   # Compute the directory in which to run the test.
+   set(CMAKE_${lang}_COMPILER_ID_DIR ${CMAKE_PLATFORM_INFO_DIR}/CompilerId${lang})
+ 
