@@ -23,4 +23,4 @@ rm -rf build
 mkdir -p build
 cd build
 
-cmake --trace -D CMAKE_C_COMPILER=${CC} -G Ninja .. 
+cmake -D CMAKE_C_COMPILER=${CC} -G Ninja .. 

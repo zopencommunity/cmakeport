@@ -1,6 +1,6 @@
 diff --git a/Modules/CMakeDeterminePLICompiler.cmake b/Modules/CMakeDeterminePLICompiler.cmake
 new file mode 100644
-index 0000000000..622dd23ccf
+index 0000000000..b8ff84164c
 --- /dev/null
 +++ b/Modules/CMakeDeterminePLICompiler.cmake
 @@ -0,0 +1,126 @@
@@ -11,7 +11,7 @@ index 0000000000..622dd23ccf
 +# determine the compiler to use for PLI programs
 +# NOTE, a generator may set CMAKE_PLI_COMPILER before
 +# loading this file to force a compiler.
-+# use environment variable FC first if defined by user, next use
++# use environment variable PC first if defined by user, next use
 +# the cmake variable CMAKE_GENERATOR_PC which can be defined by a generator
 +# as a default compiler
 +
