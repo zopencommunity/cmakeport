@@ -6,7 +6,7 @@ export ZOPEN_CONFIGURE="skip"
 export ZOPEN_CHECK_TIMEOUT=36000 # 10 hrs
 
 export ZOPEN_GIT_URL="https://github.com/Kitware/CMake.git"
-export ZOPEN_GIT_DEPS="git make"
+export ZOPEN_GIT_DEPS="git make zoslib"
 export ZOPEN_GIT_TAG="v3.24.2"
 
 gitname=$(basename "$ZOPEN_GIT_URL")
