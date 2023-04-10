@@ -1,0 +1,11 @@
+diff --git a/Modules/CMakePLICompilerId.pli.in b/Modules/CMakePLICompilerId.pli.in
+new file mode 100644
+index 0000000000..8951d0a63c
+--- /dev/null
++++ b/Modules/CMakePLICompilerId.pli.in
+@@ -0,0 +1,5 @@
++*Process Limits( Extname( 100 ) );
++  CMakePLICompilerId: PROC OPTIONS(MAIN);
++    /* need to add 64-bit support too */
++    PUT SKIP LIST('PL/I Compiler 6.2');
++  END CMakePLICompilerId;

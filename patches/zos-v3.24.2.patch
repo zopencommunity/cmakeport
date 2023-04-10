@@ -93,22 +93,6 @@ index 82a6d21a41..0a281f3357 100644
      __TestCompiler_setTryCompileTargetType()
  
      # Avoid failing ABI detection on warnings.
-diff --git a/Modules/CMakeDetermineCompilerId.cmake b/Modules/CMakeDetermineCompilerId.cmake
-index 2b19736d47..1f4f42b67e 100644
---- a/Modules/CMakeDetermineCompilerId.cmake
-+++ b/Modules/CMakeDetermineCompilerId.cmake
-@@ -32,6 +32,11 @@ function(CMAKE_DETERMINE_COMPILER_ID lang flagvar src)
-   endif()
-   string(REPLACE " " ";" CMAKE_${lang}_COMPILER_ID_FLAGS_LIST "${CMAKE_${lang}_COMPILER_ID_FLAGS}")
- 
-+  # Drop qASCII Flag for z/OS for correct encoding of string literals.
-+  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
-+    string(REGEX REPLACE "-(qASCII|qascii|fzos-le-char-mode=ascii);?" "" CMAKE_${lang}_COMPILER_ID_FLAGS_LIST "${CMAKE_${lang}_COMPILER_ID_FLAGS_LIST}")
-+  endif()
-+
-   # Compute the directory in which to run the test.
-   set(CMAKE_${lang}_COMPILER_ID_DIR ${CMAKE_PLATFORM_INFO_DIR}/CompilerId${lang})
- 
 diff --git a/Modules/CMakeDetermineSystem.cmake b/Modules/CMakeDetermineSystem.cmake
 index 2c2c2ac371..1391f2a7f5 100644
 --- a/Modules/CMakeDetermineSystem.cmake

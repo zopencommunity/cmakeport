@@ -1,0 +1,6 @@
+CMake
+log
+install
+nohup.out
+tests/build
+tests/hw.trace

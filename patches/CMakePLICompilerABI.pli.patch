@@ -1,0 +1,13 @@
+diff --git a/Modules/CMakePLICompilerABI.pli b/Modules/CMakePLICompilerABI.pli
+new file mode 100644
+index 0000000000..574e18322b
+--- /dev/null
++++ b/Modules/CMakePLICompilerABI.pli
+@@ -0,0 +1,7 @@
++*Process Limits( Extname( 100 ) );
++  CMakePLICompileABI: PROC OPTIONS(MAIN);
++    /* need to add 64-bit support too */
++    PUT SKIP LIST('INFO:sizeof_dptr[4]');
++    PUT SKIP LIST('ABI Detection');
++  END CMakePLICompileABI;
++

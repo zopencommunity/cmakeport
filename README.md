@@ -12,3 +12,14 @@ zopen build
 ```
 
 For details on the build, see (https://zosopentools.github.io/meta/#/Guides/Porting)
+
+# additional languages
+
+If we wanted to add another language (like COBOL, PL/I or HL/ASM for example), then we would want to 
+teach CMake of the language. Some starter points from
+[stackoverflow](https://stackoverflow.com/questions/7978517/how-do-i-get-cmake-to-work-with-the-go-programming-language#7979578)
+
+- Create CMakeDeterminePLICompiler.cmake [initial code]
+- Create CMakePLICompiler.cmake.in [initial code]
+- Create CMakeTestPLICompiler.cmake [initial code]
+- Create CMakePLIInformation.cmake [initial code]

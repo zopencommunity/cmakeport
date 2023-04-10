@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# Build 'hw' using the configured ninja build from 'cfghw'
+#
+export NINJA=ninja
+if ! ${NINJA} --version ; then
+  echo "Unable to find ${NINJA}" >&2
+  exit 4
+fi
+cd build && ninja

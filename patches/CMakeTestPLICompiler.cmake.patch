@@ -1,0 +1,84 @@
+diff --git a/Modules/CMakeTestPLICompiler.cmake b/Modules/CMakeTestPLICompiler.cmake
+new file mode 100644
+index 0000000000..797673a53a
+--- /dev/null
++++ b/Modules/CMakeTestPLICompiler.cmake
+@@ -0,0 +1,78 @@
++# Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
++# file Copyright.txt or https://cmake.org/licensing for details.
++
++
++if(CMAKE_PLI_COMPILER_FORCED)
++  # The compiler configuration was forced by the user.
++  # Assume the user has configured all compiler information.
++  set(CMAKE_PLI_COMPILER_WORKS TRUE)
++  return()
++endif()
++
++include(CMakeTestCompilerCommon)
++
++# Remove any cached result from an older CMake version.
++# We now store this in CMakePLICompiler.cmake.
++unset(CMAKE_PLI_COMPILER_WORKS CACHE)
++
++# Try to identify the ABI and configure it into CMakePLICompiler.cmake
++include(${CMAKE_ROOT}/Modules/CMakeDetermineCompilerABI.cmake)
++CMAKE_DETERMINE_COMPILER_ABI(PLI ${CMAKE_ROOT}/Modules/CMakePLICompilerABI.pli)
++if(CMAKE_PLI_ABI_COMPILED)
++  # The compiler worked so skip dedicated test below.
++  set(CMAKE_PLI_COMPILER_WORKS TRUE)
++  message(STATUS "Check for working PLI compiler: ${CMAKE_PLI_COMPILER} - skipped")
++endif()
++
++# This file is used by EnableLanguage in cmGlobalGenerator to
++# determine that the selected PLI compiler can actually compile
++# and link the most basic of programs.   If not, a fatal error
++# is set and cmake stops processing commands and will not generate
++# any makefiles or projects.
++if(NOT CMAKE_PLI_COMPILER_WORKS)
++  PrintTestCompilerStatus("PLI")
++  file(WRITE ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testPLICompiler.pli "
++    HELLO:   PROCEDURE OPTIONS (MAIN);
++      PUT SKIP LIST('HELLO WORLD!');
++    END HELLO;
++  ")
++  # Clear result from normal variable.
++  unset(CMAKE_PLI_COMPILER_WORKS)
++  # Puts test result in cache variable.
++  try_compile(CMAKE_PLI_COMPILER_WORKS ${CMAKE_BINARY_DIR}
++    ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/testPLICompiler.pli
++    OUTPUT_VARIABLE OUTPUT)
++  # Move result from cache to normal variable.
++  set(CMAKE_PLI_COMPILER_WORKS ${CMAKE_PLI_COMPILER_WORKS})
++  unset(CMAKE_PLI_COMPILER_WORKS CACHE)
++  if(NOT CMAKE_PLI_COMPILER_WORKS)
++    PrintTestCompilerResult(CHECK_FAIL "broken")
++    file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
++      "Determining if the PLI compiler works failed with "
++      "the following output:\n${OUTPUT}\n\n")
++    string(REPLACE "\n" "\n  " _output "${OUTPUT}")
++    message(FATAL_ERROR "The PLI compiler\n  \"${CMAKE_PLI_COMPILER}\"\n"
++      "is not able to compile a simple test program.\nIt fails "
++      "with the following output:\n  ${_output}\n\n"
++      "CMake will not be able to correctly generate this project.")
++  endif()
++  PrintTestCompilerResult(CHECK_PASS "works")
++  file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeOutput.log
++    "Determining if the PLI compiler works passed with "
++    "the following output:\n${OUTPUT}\n\n")
++endif()
++
++# Re-configure to save learned information.
++configure_file(
++  ${CMAKE_ROOT}/Modules/CMakePLICompiler.cmake.in
++  ${CMAKE_PLATFORM_INFO_DIR}/CMakePLICompiler.cmake
++  @ONLY
++  )
++include(${CMAKE_PLATFORM_INFO_DIR}/CMakePLICompiler.cmake)
++
++if(CMAKE_PLI_SIZEOF_DATA_PTR)
++  foreach(f ${CMAKE_PLI_ABI_FILES})
++    include(${f})
++  endforeach()
++  unset(CMAKE_PLI_ABI_FILES)
++endif()

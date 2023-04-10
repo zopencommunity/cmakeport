@@ -1,0 +1,28 @@
+diff --git a/Modules/CMakeDetermineCompilerId.cmake b/Modules/CMakeDetermineCompilerId.cmake
+index 2b19736d47..5a7acce657 100644
+--- a/Modules/CMakeDetermineCompilerId.cmake
++++ b/Modules/CMakeDetermineCompilerId.cmake
+@@ -5,6 +5,11 @@ macro(__determine_compiler_id_test testflags_var userflags_var)
+   separate_arguments(testflags UNIX_COMMAND "${${testflags_var}}")
+   CMAKE_DETERMINE_COMPILER_ID_BUILD("${lang}" "${testflags}" "${${userflags_var}}" "${src}")
+   CMAKE_DETERMINE_COMPILER_ID_MATCH_VENDOR("${lang}" "${COMPILER_${lang}_PRODUCED_OUTPUT}")
++  foreach(vendor ${CMAKE_${lang}_COMPILER_ID_MATCH_VENDORS})
++    if(${COMPILER_${lang}_PRODUCED_OUTPUT} MATCHES ${CMAKE_${lang}_COMPILER_ID_MATCH_VERSION_REGEX_${vendor}})
++      set(CMAKE_${lang}_COMPILER_VERSION "${CMAKE_MATCH_1}")
++    endif()
++  endforeach()
+ 
+   if(NOT CMAKE_${lang}_COMPILER_ID)
+     foreach(file ${COMPILER_${lang}_PRODUCED_FILES})
+@@ -32,6 +37,11 @@ function(CMAKE_DETERMINE_COMPILER_ID lang flagvar src)
+   endif()
+   string(REPLACE " " ";" CMAKE_${lang}_COMPILER_ID_FLAGS_LIST "${CMAKE_${lang}_COMPILER_ID_FLAGS}")
+ 
++  # Drop qASCII Flag for z/OS for correct encoding of string literals.
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    string(REGEX REPLACE "-(qASCII|qascii|fzos-le-char-mode=ascii);?" "" CMAKE_${lang}_COMPILER_ID_FLAGS_LIST "${CMAKE_${lang}_COMPILER_ID_FLAGS_LIST}")
++  endif()
++
+   # Compute the directory in which to run the test.
+   set(CMAKE_${lang}_COMPILER_ID_DIR ${CMAKE_PLATFORM_INFO_DIR}/CompilerId${lang})
+ 
