@@ -1,0 +1,43 @@
+diff --git a/Modules/Platform/OS390.cmake b/Modules/Platform/OS390.cmake
+new file mode 100644
+index 0000000000..1773726a86
+--- /dev/null
++++ b/Modules/Platform/OS390.cmake
+@@ -0,0 +1,37 @@
++set(OS390 1)
++set(ZOS 1)
++
++set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
++set(CMAKE_STATIC_LIBRARY_SUFFIX ".a")
++set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
++set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
++set(CMAKE_LINK_LIBRARY_SUFFIX "")
++set(CMAKE_IMPORT_LIBRARY_PREFIX "lib")
++set(CMAKE_IMPORT_LIBRARY_SUFFIX ".x")
++set(CMAKE_EXECUTABLE_SUFFIX "")
++set(CMAKE_DL_LIBS "")
++
++set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
++set(CMAKE_FIND_LIBRARY_SUFFIXES ".x" ".a")
++
++set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
++
++if(CMAKE_C_COMPILER_ID MATCHES "Clang")
++  set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS "-shared")
++elseif(CMAKE_C_COMPILER_ID MATCHES "zOS")
++  set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS "-Wl,DLL")
++endif()
++
++set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
++
++# z/OS archiver (ar) cannot archive two file names with the same name
++# as part of the same archive command. We must make sure the
++# object file names are distinct.
++set(CMAKE_MANGLE_OBJECT_FILE_NAMES "ON")
++
++include(Platform/UnixPaths)
++
++# Allow options and operands to be interspersed for c89/cc/c++ utilities.
++set(_CC_CCMODE ON)
++set(_CXX_CCMODE ON)
++set(_C89_CCMODE ON)

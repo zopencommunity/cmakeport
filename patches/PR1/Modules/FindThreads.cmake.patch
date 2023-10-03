@@ -1,0 +1,15 @@
+diff --git a/Modules/FindThreads.cmake b/Modules/FindThreads.cmake
+index 0fa6ae7661..1dbde75199 100644
+--- a/Modules/FindThreads.cmake
++++ b/Modules/FindThreads.cmake
+@@ -68,6 +68,10 @@ endif()
+ 
+ # simple pthread test code
+ set(PTHREAD_C_CXX_TEST_SOURCE [====[
++#ifdef __MVS__
++#define _UNIX03_THREADS
++#include <stddef.h>
++#endif
+ #include <pthread.h>
+ 
+ static void* test_func(void* data)

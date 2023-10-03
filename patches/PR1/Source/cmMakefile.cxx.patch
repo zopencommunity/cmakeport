@@ -1,0 +1,19 @@
+diff --git a/Source/cmMakefile.cxx b/Source/cmMakefile.cxx
+index 0af0ed079a..d5d32914ce 100644
+--- a/Source/cmMakefile.cxx
++++ b/Source/cmMakefile.cxx
+@@ -4121,6 +4121,14 @@ int cmMakefile::ConfigureFile(const std::string& infile,
+     // close the files before attempting to copy
+     fin.close();
+     fout.close();
++
++#if defined(__MVS__)
++    if ( !cmSystemTools::CopyFileAttributes(sinfile.c_str(),
++                                            tempOutputFile.c_str()) ) {
++      return 0;
++      }
++#endif
++
+     if (!cmSystemTools::CopyFileIfDifferent(tempOutputFile, soutfile)) {
+       this->IssueMessage(MessageType::FATAL_ERROR,
+                          cmSystemTools::GetLastSystemError());

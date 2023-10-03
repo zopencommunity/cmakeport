@@ -1,0 +1,100 @@
+diff --git a/Source/kwsys/SystemTools.cxx b/Source/kwsys/SystemTools.cxx
+index 3bb78696c2..fbd22581e4 100644
+--- a/Source/kwsys/SystemTools.cxx
++++ b/Source/kwsys/SystemTools.cxx
+@@ -18,6 +18,10 @@
+ #  define _WIN32_WINNT _WIN32_WINNT_VISTA
+ #endif
+ 
++#if defined(__MVS__)
++#define _OPEN_SYS_FILE_EXT 1
++#endif
++
+ #include "kwsysPrivate.h"
+ #include KWSYS_HEADER(RegularExpression.hxx)
+ #include KWSYS_HEADER(SystemTools.hxx)
+@@ -85,7 +89,9 @@
+ #  include <unistd.h>
+ #  include <utime.h>
+ #  ifndef __VMS
+-#    include <sys/param.h>
++#    ifndef __MVS__
++#      include <sys/param.h>
++#    endif
+ #    include <termios.h>
+ #  endif
+ #  include <csignal> /* sigprocmask */
+@@ -2480,6 +2486,12 @@ SystemTools::CopyStatus SystemTools::CopyFileContentBlockwise(
+   fin.close();
+   fout.close();
+ 
++#if defined(__MVS__)
++  if (!SystemTools::CopyFileAttributes(source, destination)) {
++    return CopyStatus{ Status::POSIX_errno(), CopyStatus::DestPath };
++    }
++#endif
++
+   if (!fout) {
+     return CopyStatus{ Status::POSIX_errno(), CopyStatus::DestPath };
+   }
+@@ -2525,6 +2537,12 @@ SystemTools::CopyStatus SystemTools::CloneFileContent(
+   close(in);
+   close(out);
+ 
++#if defined(__MVS__)
++  if (!SystemTools::CopyFileAttributes(source, destination)) {
++    return CopyStatus{ Status::POSIX_errno(), CopyStatus::DestPath };
++    }
++#endif
++
+   return status;
+ #elif defined(__APPLE__) &&                                                   \
+   defined(KWSYS_SYSTEMTOOLS_HAVE_MACOS_COPYFILE_CLONE)
+@@ -2559,6 +2577,39 @@ SystemTools::CopyStatus SystemTools::CloneFileContent(
+ #endif
+ }
+ 
++#if defined(__MVS__)
++bool SystemTools::CopyFileAttributes(const std::string& source, const std::string& destination)
++{
++  struct stat sourceAttributes;
++  if ( stat(source.c_str(),&sourceAttributes) )
++    {
++    return false;
++    }
++
++  attrib_t destinationAttributes;
++  memset(&destinationAttributes, 0, sizeof(destinationAttributes));
++  destinationAttributes.att_filetagchg = 1;
++
++  // If source file is text, tag output file as IBM-819 text. Otherwise copy original tagging.
++  if ( sourceAttributes.st_tag.ft_txtflag == 1 )
++    {
++    destinationAttributes.att_filetag.ft_ccsid = 819;
++    destinationAttributes.att_filetag.ft_txtflag = 1;
++    }
++  else
++    {
++    destinationAttributes.att_filetag.ft_ccsid = sourceAttributes.st_tag.ft_ccsid;
++    destinationAttributes.att_filetag.ft_txtflag = 0;
++    }
++
++  if ( __chattr((char*)destination.c_str(), &destinationAttributes, sizeof(destinationAttributes)) )
++    {
++    return false;
++    }
++  return true;
++}
++#endif
++
+ /**
+  * Copy a file named by "source" to the file named by "destination".
+  */
+@@ -2609,6 +2660,7 @@ SystemTools::CopyStatus SystemTools::CopyFileAlways(
+     if (!status.IsSuccess()) {
+       status = SystemTools::CopyFileContentBlockwise(source, real_destination);
+     }
++
+     if (!status.IsSuccess()) {
+       return status;
+     }

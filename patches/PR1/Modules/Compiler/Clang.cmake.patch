@@ -1,0 +1,20 @@
+diff --git a/Modules/Compiler/Clang.cmake b/Modules/Compiler/Clang.cmake
+index 46f5fc1941..c038ed1a20 100644
+--- a/Modules/Compiler/Clang.cmake
++++ b/Modules/Compiler/Clang.cmake
+@@ -52,8 +52,13 @@ else()
+       endif()
+     endif()
+ 
+-    set(_CMAKE_${lang}_IPO_SUPPORTED_BY_CMAKE YES)
+-    set(_CMAKE_${lang}_IPO_MAY_BE_SUPPORTED_BY_COMPILER YES)
++    if(ZOS)
++      set(_CMAKE_${lang}_IPO_SUPPORTED_BY_CMAKE NO)
++      set(_CMAKE_${lang}_IPO_MAY_BE_SUPPORTED_BY_COMPILER NO)
++    else()
++      set(_CMAKE_${lang}_IPO_SUPPORTED_BY_CMAKE YES)
++      set(_CMAKE_${lang}_IPO_MAY_BE_SUPPORTED_BY_COMPILER YES)
++    endif()
+ 
+     string(COMPARE EQUAL "${CMAKE_${lang}_COMPILER_ID}" "AppleClang" __is_apple_clang)
+     string(COMPARE EQUAL "${CMAKE_${lang}_COMPILER_ID}" "FujitsuClang" __is_fujitsu_clang)

@@ -1,0 +1,20 @@
+diff --git a/Utilities/cmlibuv/src/unix/os390-syscalls.h b/Utilities/cmlibuv/src/unix/os390-syscalls.h
+index 9f504171d8..d467af9c45 100644
+--- a/Utilities/cmlibuv/src/unix/os390-syscalls.h
++++ b/Utilities/cmlibuv/src/unix/os390-syscalls.h
+@@ -28,7 +28,6 @@
+ #include <dirent.h>
+ #include <poll.h>
+ #include <pthread.h>
+-#include "zos-base.h"
+ 
+ #define EPOLL_CTL_ADD             1
+ #define EPOLL_CTL_DEL             2
+@@ -58,6 +57,7 @@ int epoll_wait(uv__os390_epoll* ep, struct epoll_event *events, int maxevents, i
+ int epoll_file_close(int fd);
+ 
+ /* utility functions */
++int nanosleep(const struct timespec* req, struct timespec* rem);
+ int scandir(const char* maindir, struct dirent*** namelist,
+             int (*filter)(const struct dirent *),
+             int (*compar)(const struct dirent **,

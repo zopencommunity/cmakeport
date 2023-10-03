@@ -1,0 +1,12 @@
+diff --git a/README.rst b/README.rst
+index 64e2353dd2..93f0946745 100644
+--- a/README.rst
++++ b/README.rst
+@@ -39,6 +39,7 @@ Supported Platforms
+ * OpenBSD
+ * Solaris
+ * AIX
++* z/OS
+ 
+ Other UNIX-like operating systems may work too out of the box, if not
+ it should not be a major problem to port CMake to this platform.

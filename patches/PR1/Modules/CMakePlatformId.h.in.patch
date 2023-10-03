@@ -1,0 +1,24 @@
+diff --git a/Modules/CMakePlatformId.h.in b/Modules/CMakePlatformId.h.in
+index 32b71663ca..3289f50570 100644
+--- a/Modules/CMakePlatformId.h.in
++++ b/Modules/CMakePlatformId.h.in
+@@ -35,6 +35,9 @@
+ #elif defined(_AIX) || defined(__AIX) || defined(__AIX__) || defined(__aix) || defined(__aix__)
+ # define PLATFORM_ID "AIX"
+ 
++#elif defined(__MVS__)
++# define PLATFORM_ID "zOS"
++
+ #elif defined(__hpux) || defined(__hpux__)
+ # define PLATFORM_ID "HP-UX"
+ 
+@@ -195,6 +198,9 @@
+ # elif defined(__ICCSTM8__)
+ #  define ARCHITECTURE_ID "STM8"
+ 
++# elif defined(__MVS__) && defined(__ARCH__)
++#  define ARCHITECTURE_ID "ARCH" STRINGIFY(__ARCH__)
++
+ # else /* unknown architecture */
+ #  define ARCHITECTURE_ID ""
+ # endif

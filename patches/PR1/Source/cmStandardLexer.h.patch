@@ -1,0 +1,13 @@
+diff --git a/Source/cmStandardLexer.h b/Source/cmStandardLexer.h
+index 27225280d6..77ba6c9067 100644
+--- a/Source/cmStandardLexer.h
++++ b/Source/cmStandardLexer.h
+@@ -8,7 +8,7 @@
+ #  define _XOPEN_SOURCE 600
+ #endif
+ #if !defined(_POSIX_C_SOURCE) && !defined(_WIN32) && !defined(__sun) &&       \
+-  !defined(__OpenBSD__)
++  !defined(__OpenBSD__) && !defined(__MVS__)
+ /* POSIX APIs are needed */
+ // NOLINTNEXTLINE(bugprone-reserved-identifier)
+ #  define _POSIX_C_SOURCE 200809L

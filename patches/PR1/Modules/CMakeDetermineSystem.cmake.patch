@@ -1,0 +1,22 @@
+diff --git a/Modules/CMakeDetermineSystem.cmake b/Modules/CMakeDetermineSystem.cmake
+index 386be73f68..b50b4a52c8 100644
+--- a/Modules/CMakeDetermineSystem.cmake
++++ b/Modules/CMakeDetermineSystem.cmake
+@@ -29,7 +29,7 @@
+ # cygwin                        CYGWIN_NT-5.1
+ # MSYS                          MSYS_NT-6.1
+ # MacOSX                        Darwin
+-
++# z/OS                          OS/390
+ 
+ # find out on which system cmake runs
+ if(CMAKE_HOST_UNIX)
+@@ -53,7 +53,7 @@ if(CMAKE_HOST_UNIX)
+         OUTPUT_STRIP_TRAILING_WHITESPACE
+         ERROR_QUIET)
+     endif()
+-    if(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux|CYGWIN.*|MSYS.*|^GNU$|Android")
++    if(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux|CYGWIN.*|MSYS.*|^GNU$|Android|OS/390")
+       execute_process(COMMAND ${CMAKE_UNAME} -m
+         OUTPUT_VARIABLE CMAKE_HOST_SYSTEM_PROCESSOR
+         RESULT_VARIABLE val

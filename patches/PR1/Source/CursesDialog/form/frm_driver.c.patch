@@ -1,0 +1,13 @@
+diff --git a/Source/CursesDialog/form/frm_driver.c b/Source/CursesDialog/form/frm_driver.c
+index 9cbb12ff98..d8e1c3572b 100644
+--- a/Source/CursesDialog/form/frm_driver.c
++++ b/Source/CursesDialog/form/frm_driver.c
+@@ -865,7 +865,7 @@ static int Display_Or_Erase_Field(FIELD * field, bool bEraseFlag)
+         Set_Field_Window_Attributes(field,win);
+       else
+         {
+-#if defined(__LSB_VERSION__)
++#if defined(__LSB_VERSION__) || defined(__MVS__)
+         /* getattrs() would be handy, but it is not part of LSB 4.0 */
+         attr_t fwinAttrs;
+         short  fwinPair;

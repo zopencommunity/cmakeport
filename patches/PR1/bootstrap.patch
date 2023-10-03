@@ -1,0 +1,80 @@
+diff --git a/bootstrap b/bootstrap
+index cc604256d8..8f1b8ff0c4 100755
+--- a/bootstrap
++++ b/bootstrap
+@@ -172,6 +172,13 @@ else
+   cmake_system_linux=false
+ fi
+ 
++# Determine whether this is z/OS
++if echo "${cmake_system}" | grep OS/390 >/dev/null 2>&1; then
++  cmake_system_zos=true
++else
++  cmake_system_zos=false
++ fi
++
+ # Determine whether this is a PA-RISC machine
+ # This only works for Linux or HP-UX, not other PA-RISC OSs (BSD maybe?). Also
+ # may falsely detect parisc on HP-UX m68k
+@@ -647,6 +654,14 @@ else
+     "
+ fi
+ 
++if ${cmake_system_zos}; then
++  LIBUV_C_SOURCES="${LIBUV_C_SOURCES}\
++    src/unix/os390-syscalls.c \
++    src/unix/pthread-fixes.c \
++    src/unix/os390-proctitle.c \
++  "
++fi
++
+ # Display CMake bootstrap usage
+ cmake_usage()
+ {
+@@ -986,6 +1001,7 @@ while test $# != 0; do
+   CFLAGS=*) CFLAGS=`cmake_arg "$1"` ;;
+   CXXFLAGS=*) CXXFLAGS=`cmake_arg "$1"` ;;
+   LDFLAGS=*) LDFLAGS=`cmake_arg "$1"` ;;
++  LIBS=*) LIBS=`cmake_arg "$1"` ;;
+   --) shift; break ;;
+   *) die "Unknown option: $1" ;;
+   esac
+@@ -1151,6 +1167,7 @@ case "${cmake_system}" in
+   *Darwin*) cmake_toolchains='Clang GNU' ;;
+   *Linux*) cmake_toolchains='GNU Clang XL PGI PathScale' ;;
+   *MINGW*) cmake_toolchains='GNU' ;;
++  *OS/390*) cmake_toolchains='Clang z/OS' ;;
+ esac
+ 
+ # Toolchain compiler name table.
+@@ -1733,7 +1750,7 @@ if test "${cmake_bootstrap_generator}" = "Ninja"; then
+   fi
+ fi
+ 
+-libs=""
++libs="${LIBS}"
+ 
+ uv_c_flags=""
+ if ${cmake_system_mingw}; then
+@@ -1771,6 +1788,13 @@ else
+       uv_c_flags="${uv_c_flags} -D_XOPEN_SOURCE=700"
+       libs="${libs} -lsocket"
+       ;;
++    *OS/390*)
++      uv_c_flags="${uv_c_flags} -D_XOPEN_SOURCE=600 -DPATH_MAX=1024 -D_AE_BIMODAL -D_ALL_SOURCE \
++                  -D_ISOC99_SOURCE -D_LARGE_TIME_API -D_OPEN_MSGQ_EXT -D_OPEN_SYS_FILE_EXT -D_OPEN_SYS_IF_EXT \
++                  -D_OPEN_SYS_SOCK_EXT3 -D_OPEN_SYS_SOCK_IPV6 -D_UNIX03_SOURCE -D_UNIX03_THREADS -D_UNIX03_WITHDRAWN \
++                  -D_XOPEN_SOURCE_EXTENDED"
++      libs="${libs}"
++      ;;
+   esac
+ fi
+ if test "x${bootstrap_system_libuv}" = "x"; then
+@@ -2075,6 +2099,7 @@ export MAKE
+ export CFLAGS
+ export CXXFLAGS
+ export LDFLAGS
++export LIBS
+ 
+ # Run bootstrap CMake to configure real CMake
+ cmake_options="-DCMAKE_BOOTSTRAP=1"

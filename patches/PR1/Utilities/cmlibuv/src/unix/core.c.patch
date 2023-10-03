@@ -1,0 +1,12 @@
+diff --git a/Utilities/cmlibuv/src/unix/core.c b/Utilities/cmlibuv/src/unix/core.c
+index d0b0e0069b..918b1ed05c 100644
+--- a/Utilities/cmlibuv/src/unix/core.c
++++ b/Utilities/cmlibuv/src/unix/core.c
+@@ -88,6 +88,7 @@ extern char** environ;
+ 
+ #if defined(__MVS__)
+ # include <sys/ioctl.h>
++# include <stdbool.h>
+ # include "zos-sys-info.h"
+ #endif
+ 
