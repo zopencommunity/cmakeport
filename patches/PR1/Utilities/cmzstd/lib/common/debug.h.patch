@@ -1,0 +1,16 @@
+diff --git a/Utilities/cmzstd/lib/common/debug.h b/Utilities/cmzstd/lib/common/debug.h
+index 3b2a320a18..7b8b7fd4f0 100644
+--- a/Utilities/cmzstd/lib/common/debug.h
++++ b/Utilities/cmzstd/lib/common/debug.h
+@@ -70,7 +70,10 @@ extern "C" {
+ #  define ZSTD_DEPS_NEED_ASSERT
+ #  include "zstd_deps.h"
+ #else
+-#  ifndef assert   /* assert may be already defined, due to prior #include <assert.h> */
++#  if !defined(assert) /* assert may be already defined, due to prior #include <assert.h> */
++#  ifdef __MVS__ 
++#    define __assert 1 /* Indicate to the headers that we have our own assert */
++#  endif
+ #    define assert(condition) ((void)0)   /* disable assert (default) */
+ #  endif
+ #endif

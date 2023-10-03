@@ -1,0 +1,13 @@
+diff --git a/Modules/CMakeFindBinUtils.cmake b/Modules/CMakeFindBinUtils.cmake
+index f778891b41..5e7fa860e8 100644
+--- a/Modules/CMakeFindBinUtils.cmake
++++ b/Modules/CMakeFindBinUtils.cmake
+@@ -173,7 +173,7 @@ else()
+   set(_CMAKE_TAPI_NAMES "tapi")
+ 
+   # Prepend toolchain-specific names.
+-  if("${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_COMPILER_ID}" STREQUAL Clang)
++  if("${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_COMPILER_ID}" STREQUAL Clang AND NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
+     if("x${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_SIMULATE_ID}" STREQUAL "xMSVC")
+       list(PREPEND _CMAKE_LINKER_NAMES "lld-link")
+     elseif(NOT APPLE)
