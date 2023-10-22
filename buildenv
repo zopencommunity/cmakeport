@@ -1,3 +1,6 @@
+# bump: cmake-version /CMAKE_VERSION="(.*)"/ https://github.com/Kitware/CMake.git|semver:*
+CMAKE_VERSION="3.27.6"
+
 export ZOPEN_BUILD_LINE="STABLE"
 export ZOPEN_CHECK_TIMEOUT=72000 # 20 hrs
 
@@ -6,7 +9,7 @@ export ZOPEN_CONFIGURE="skip"
 
 export ZOPEN_STABLE_URL="https://github.com/Kitware/CMake.git"
 export ZOPEN_STABLE_DEPS="git make zoslib cmake"
-export ZOPEN_STABLE_TAG="v3.27.6"
+export ZOPEN_STABLE_TAG="v${CMAKE_VERSION}"
 export ZOPEN_COMP=CLANG
 
 export ZOPEN_CHECK="./bin/ctest"
@@ -31,4 +34,3 @@ totalTests:$totalTests
 expectedFailures:150
 TEST
 }
-
