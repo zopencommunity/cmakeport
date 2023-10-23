@@ -1,3 +1,5 @@
+[![Automatic version updates](https://github.com/ZOSOpenTools/cmakeport/actions/workflows/bump.yml/badge.svg)](https://github.com/ZOSOpenTools/cmakeport/actions/workflows/bump.yml)
+
 # cmakeport
 Place to share information about configure/build of cmake for z/OS (only deltas to open source)
 

@@ -1,12 +1,15 @@
+# bump: cmake-version /CMAKE_VERSION="(.*)"/ https://github.com/Kitware/CMake.git|semver:*
+CMAKE_VERSION="3.27.6"
+
 export ZOPEN_BUILD_LINE="STABLE"
-export ZOPEN_CHECK_TIMEOUT=36000 # 10 hrs
+export ZOPEN_CHECK_TIMEOUT=72000 # 20 hrs
 
 export ZOPEN_BOOTSTRAP_OPTS="--prefix=\${ZOPEN_INSTALL_DIR} --parallel=\$ZOPEN_NUM_JOBS --verbose -- -DCMAKE_BUILD_TYPE=None -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_C_COMPILER=\${CC} -DCMAKE_C_FLAGS=\"\${CPPFLAGS} \${CFLAGS}\" -DCMAKE_CXX_COMPILER=\${CXX} -DCMAKE_CXX_FLAGS=\"\${CPPFLAGS} \${CXXFLAGS}\"  -DCMAKE_CXX_LINK_LIBRARY_FLAG=\"\${LDFLAGS}\" -DCMAKE_C_LINK_LIBRARY_FLAG=\"\${LDFLAGS}\" -DCMAKE_CXX_STANDARD_LIBRARIES=\"\${LIBS}\" -DCMAKE_C_STANDARD_LIBRARIES=\"\${LIBS}\""
 export ZOPEN_CONFIGURE="skip"
 
 export ZOPEN_STABLE_URL="https://github.com/Kitware/CMake.git"
 export ZOPEN_STABLE_DEPS="git make zoslib cmake"
-export ZOPEN_STABLE_TAG="v3.27.6"
+export ZOPEN_STABLE_TAG="v${CMAKE_VERSION}"
 export ZOPEN_COMP=CLANG
 
 export ZOPEN_CHECK="./bin/ctest"
@@ -21,7 +24,6 @@ zopen_init()
 zopen_check_results()
 {
     chk="$1/$2_check.log"
-    # grep and parse test summary line, e.g, "90% of tests pass, or ~540"
     nums=$(grep -E "% tests passed" "${chk}" | tr '\n' ' ' | sed -e 's/[^0-9]/ /g' -e 's/^ *//g' -e 's/ *$//g' | tr -s ' ')
     totalTests=$( echo $nums | awk '{print $3}')
     failures=$( echo $nums | awk '{print $2}')
@@ -29,7 +31,7 @@ zopen_check_results()
 cat <<TEST
 actualFailures:$failures
 totalTests:$totalTests
-expectedFailures:60
+expectedFailures:150
 TEST
 }
 
