@@ -33,3 +33,7 @@ expectedFailures:60
 TEST
 }
 
+zopen_get_version()
+{
+  ./bin/cmake --version | head -1 | cut -d' ' -f3
+}
