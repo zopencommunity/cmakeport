@@ -13,7 +13,7 @@ index 5861aaaa20..0eb101b0e4 100644
  
  
  static void init_message_queue(uv__os390_epoll* lst) {
-+#ifdef ZOS_ENABLE_MSGQUEUE
++#ifndef ZOS_ENABLE_MSGQUEUE
 +  lst->msg_queue = -1;
 +#else
    struct {
