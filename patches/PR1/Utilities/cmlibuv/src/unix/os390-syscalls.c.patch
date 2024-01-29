@@ -1,0 +1,39 @@
+diff --git a/Utilities/cmlibuv/src/unix/os390-syscalls.c b/Utilities/cmlibuv/src/unix/os390-syscalls.c
+index 5861aaaa20..0eb101b0e4 100644
+--- a/Utilities/cmlibuv/src/unix/os390-syscalls.c
++++ b/Utilities/cmlibuv/src/unix/os390-syscalls.c
+@@ -137,11 +137,16 @@ static void maybe_resize(uv__os390_epoll* lst, unsigned int len) {
+ 
+ 
+ void uv__os390_cleanup(void) {
++#ifdef ZOS_ENABLE_MSGQUEUE
+   msgctl(uv_backend_fd(uv_default_loop()), IPC_RMID, NULL);
++#endif
+ }
+ 
+ 
+ static void init_message_queue(uv__os390_epoll* lst) {
++#ifndef ZOS_ENABLE_MSGQUEUE
++  lst->msg_queue = -1;
++#else
+   struct {
+     long int header;
+     char body;
+@@ -164,6 +169,7 @@ static void init_message_queue(uv__os390_epoll* lst) {
+   /* Clean up the dummy message sent above */
+   if (msgrcv(lst->msg_queue, &msg, sizeof(msg.body), 0, 0) != sizeof(msg.body))
+     abort();
++#endif
+ }
+ 
+ 
+@@ -375,7 +381,9 @@ void epoll_queue_close(uv__os390_epoll* lst) {
+   uv_mutex_unlock(&global_epoll_lock);
+ 
+   /* Free resources */
++#ifdef ZOS_ENABLE_MSGQUEUE
+   msgctl(lst->msg_queue, IPC_RMID, NULL);
++#endif
+   lst->msg_queue = -1;
+   uv__free(lst->items);
+   lst->items = NULL;
