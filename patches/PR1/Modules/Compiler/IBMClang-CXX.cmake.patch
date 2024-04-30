@@ -1,8 +1,8 @@
 diff --git a/Modules/Compiler/IBMClang-CXX.cmake b/Modules/Compiler/IBMClang-CXX.cmake
-index 5431b17e20..16ba6e65f7 100644
+index 5431b17e20..5b6e6719c4 100644
 --- a/Modules/Compiler/IBMClang-CXX.cmake
 +++ b/Modules/Compiler/IBMClang-CXX.cmake
-@@ -26,14 +26,19 @@ set(CMAKE_CXX14_STANDARD__HAS_FULL_SUPPORT ON)
+@@ -26,14 +26,21 @@ set(CMAKE_CXX14_STANDARD__HAS_FULL_SUPPORT ON)
  set(CMAKE_CXX14_STANDARD_COMPILE_OPTION "-std=c++14")
  set(CMAKE_CXX14_EXTENSION_COMPILE_OPTION "-std=gnu++14")
  
@@ -13,6 +13,8 @@ index 5431b17e20..16ba6e65f7 100644
    set(CMAKE_CXX17_EXTENSION_COMPILE_OPTION "-std=gnu++17")
    set(CMAKE_CXX20_STANDARD_COMPILE_OPTION  "-std=c++20")
    set(CMAKE_CXX20_EXTENSION_COMPILE_OPTION "-std=gnu++20")
++  set(CMAKE_CXX23_STANDARD_COMPILE_OPTION  "-std=c++2b")
++  set(CMAKE_CXX23_EXTENSION_COMPILE_OPTION "-std=gnu++2b")
  endif()
  
 -__compiler_check_default_language_standard(CXX 17.1.0 17)
