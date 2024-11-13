@@ -206,6 +206,103 @@ index ec97381bd7..8c780dce03 100644
  
  set(CMAKE_CXX_COMPILE_OBJECT
    "<CMAKE_CXX_COMPILER> -x c++ <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>")
+diff --git a/Modules/Compiler/zOS-C.cmake b/Modules/Compiler/zOS-C.cmake
+new file mode 100644
+index 0000000000..73928346d2
+--- /dev/null
++++ b/Modules/Compiler/zOS-C.cmake
+@@ -0,0 +1,7 @@
++include(Compiler/zOS)
++__compiler_zos(C)
++set(CMAKE_C_FLAGS_RELEASE_INIT "${CMAKE_C_FLAGS_RELEASE_INIT} -DNDEBUG")
++set(CMAKE_C_FLAGS_MINSIZEREL_INIT "${CMAKE_C_FLAGS_MINSIZEREL_INIT} -DNDEBUG")
++
++# Raise severity of include file checks from warning to error for C.
++set(CMAKE_PLATFORM_CHECK_INCLUDE_C_FLAGS "-qseverity=e=ccn3296")
+diff --git a/Modules/Compiler/zOS-CXX.cmake b/Modules/Compiler/zOS-CXX.cmake
+new file mode 100644
+index 0000000000..de82177f25
+--- /dev/null
++++ b/Modules/Compiler/zOS-CXX.cmake
+@@ -0,0 +1,39 @@
++include(Compiler/zOS)
++__compiler_zos(CXX)
++set(CMAKE_CXX_FLAGS_RELEASE_INIT "${CMAKE_CXX_FLAGS_RELEASE_INIT} -DNDEBUG")
++set(CMAKE_CXX_FLAGS_MINSIZEREL_INIT "${CMAKE_CXX_FLAGS_MINSIZEREL_INIT} -DNDEBUG")
++
++if(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 2.3.1)
++  set(CMAKE_CXX98_STANDARD__HAS_FULL_SUPPORT ON)
++  set(CMAKE_CXX98_STANDARD_COMPILE_OPTION "-std=c++98")
++  set(CMAKE_CXX98_EXTENSION_COMPILE_OPTION "-std=gnu++98")
++
++  set(CMAKE_CXX11_STANDARD__HAS_FULL_SUPPORT ON)
++  set(CMAKE_CXX11_STANDARD_COMPILE_OPTION "-std=c++11")
++  set(CMAKE_CXX11_EXTENSION_COMPILE_OPTION "-std=gnu++11")
++
++  set(CMAKE_CXX14_STANDARD__HAS_FULL_SUPPORT ON)
++  set(CMAKE_CXX14_STANDARD_COMPILE_OPTION "-std=c++14")
++  set(CMAKE_CXX14_EXTENSION_COMPILE_OPTION "-std=gnu++14")
++endif()
++
++macro(cmake_record_cxx_compile_features)
++  list(APPEND CMAKE_CXX_COMPILE_FEATURES
++    cxx_std_98
++    cxx_std_11
++    cxx_std_14
++    )
++  _record_compiler_features(CXX "" CMAKE_CXX_COMPILE_FEATURES)
++endmacro()
++
++if(NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 2.3.1)
++  if (NOT CMAKE_CXX_COMPILER_FORCED)
++    if (NOT CMAKE_CXX_STANDARD_COMPUTED_DEFAULT)
++      message(FATAL_ERROR "CMAKE_CXX_STANDARD_COMPUTED_DEFAULT should be set for ${CMAKE_CXX_COMPILER_ID} (${CMAKE_CXX_COMPILER}) version ${CMAKE_CXX_COMPILER_VERSION}")
++    endif()
++    set(CMAKE_CXX_STANDARD_DEFAULT ${CMAKE_CXX_STANDARD_COMPUTED_DEFAULT})
++  elseif(NOT DEFINED CMAKE_CXX_STANDARD_DEFAULT)
++    # Compiler id was forced so just guess the default standard level.
++    set(CMAKE_CXX_STANDARD_DEFAULT 98)
++  endif()
++endif()
+diff --git a/Modules/Compiler/zOS.cmake b/Modules/Compiler/zOS.cmake
+new file mode 100644
+index 0000000000..4a59c33f60
+--- /dev/null
++++ b/Modules/Compiler/zOS.cmake
+@@ -0,0 +1,33 @@
++
++#=============================================================================
++# Copyright 2002-2011 Kitware, Inc.
++#
++# Distributed under the OSI-approved BSD License (the "License");
++# see accompanying file Copyright.txt for details.
++#
++# This software is distributed WITHOUT ANY WARRANTY; without even the
++# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
++# See the License for more information.
++#=============================================================================
++# (To distribute this file outside of CMake, substitute the full
++#  License text for the above reference.)
++
++# This module is shared by multiple languages; use include blocker.
++if(__COMPILER_ZOS)
++  return()
++endif()
++set(__COMPILER_ZOS 1)
++
++macro(__compiler_zos lang)
++  # Feature flags.
++  set(CMAKE_${lang}_VERBOSE_FLAG "-V")
++
++  # Initial configuration flags.
++  set(CMAKE_${lang}_FLAGS_INIT "")
++  set(CMAKE_${lang}_FLAGS_DEBUG_INIT "-qdebug")
++  set(CMAKE_${lang}_FLAGS_MINSIZEREL_INIT "-O -DNDEBUG")
++  set(CMAKE_${lang}_FLAGS_RELEASE_INIT "-O3 -DNDEBUG")
++  set(CMAKE_${lang}_FLAGS_RELWITHDEBINFO_INIT "-O2 -qdebug -DNDEBUG")
++
++  set(CMAKE_DEPFILE_FLAGS_${lang} "-MF <DEPFILE> -qmakedep=gcc")
++endmacro()
 diff --git a/Modules/FindThreads.cmake b/Modules/FindThreads.cmake
 index 0fa6ae7661..170acd2f21 100644
 --- a/Modules/FindThreads.cmake
@@ -233,6 +330,49 @@ index 0fa6ae7661..170acd2f21 100644
  if(CMAKE_USE_PTHREADS_INIT)
    if(CMAKE_SYSTEM_NAME MATCHES "HP-UX")
      # Use libcma if it exists and can be used.  It provides more
+diff --git a/Modules/Platform/OS390.cmake b/Modules/Platform/OS390.cmake
+new file mode 100644
+index 0000000000..1773726a86
+--- /dev/null
++++ b/Modules/Platform/OS390.cmake
+@@ -0,0 +1,37 @@
++set(OS390 1)
++set(ZOS 1)
++
++set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
++set(CMAKE_STATIC_LIBRARY_SUFFIX ".a")
++set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
++set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
++set(CMAKE_LINK_LIBRARY_SUFFIX "")
++set(CMAKE_IMPORT_LIBRARY_PREFIX "lib")
++set(CMAKE_IMPORT_LIBRARY_SUFFIX ".x")
++set(CMAKE_EXECUTABLE_SUFFIX "")
++set(CMAKE_DL_LIBS "")
++
++set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
++set(CMAKE_FIND_LIBRARY_SUFFIXES ".x" ".a")
++
++set(CMAKE_SHARED_LIBRARY_C_FLAGS "")
++
++if(CMAKE_C_COMPILER_ID MATCHES "Clang")
++  set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS "-shared")
++elseif(CMAKE_C_COMPILER_ID MATCHES "zOS")
++  set(CMAKE_SHARED_LIBRARY_CREATE_C_FLAGS "-Wl,DLL")
++endif()
++
++set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
++
++# z/OS archiver (ar) cannot archive two file names with the same name
++# as part of the same archive command. We must make sure the
++# object file names are distinct.
++set(CMAKE_MANGLE_OBJECT_FILE_NAMES "ON")
++
++include(Platform/UnixPaths)
++
++# Allow options and operands to be interspersed for c89/cc/c++ utilities.
++set(_CC_CCMODE ON)
++set(_CXX_CCMODE ON)
++set(_C89_CCMODE ON)
 diff --git a/README.rst b/README.rst
 index 8a471db0e9..955cb17ec6 100644
 --- a/README.rst
