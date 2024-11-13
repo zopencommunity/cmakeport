@@ -1,5 +1,5 @@
 # bump: cmake-version /CMAKE_VERSION="(.*)"/ https://github.com/Kitware/CMake.git|semver:*
-CMAKE_VERSION="3.27.8"
+CMAKE_VERSION="3.31.0"
 
 export ZOPEN_BUILD_LINE="STABLE"
 export ZOPEN_CHECK_TIMEOUT=100000 # ~30 hrs
@@ -14,6 +14,8 @@ export ZOPEN_COMP=CLANG
 
 export ZOPEN_CHECK="./bin/ctest"
 export ZOPEN_CHECK_OPTS="-j \$ZOPEN_NUM_JOBS"
+
+export ZOPEN_NAME="cmake"
 
 zopen_init() 
 {
