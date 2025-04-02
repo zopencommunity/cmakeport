@@ -9,7 +9,7 @@ export ZOPEN_CONFIGURE="skip"
 export ZOPEN_CHECK="skip" # skip for now
 
 export ZOPEN_STABLE_URL="https://github.com/Kitware/CMake.git"
-export ZOPEN_STABLE_DEPS="git make zoslib cmake zlib curl openssl"
+export ZOPEN_STABLE_DEPS="git make zoslib cmake zlib curl openssl zusage"
 export ZOPEN_STABLE_TAG="v${CMAKE_VERSION}"
 export ZOPEN_COMP=CLANG
 
