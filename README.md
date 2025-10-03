@@ -9,8 +9,7 @@ Detailed dependencies are in buildenv
 
 To build, use zopen build from (https://github.com/ZOSOpenTools/utils) after setting up your environment, e.g.
 ```
-. ./buildenv
-zopen build
+zopen build -vv
 ```
 
 For details on the build, see (https://zosopentools.github.io/meta/#/Guides/Porting)
