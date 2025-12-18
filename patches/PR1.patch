@@ -1,8 +1,8 @@
 diff --git a/Modules/CMakeDetermineCCompiler.cmake b/Modules/CMakeDetermineCCompiler.cmake
-index 73b6ceec..30925ede 100644
+index 73b6ceec..fd40f462 100644
 --- a/Modules/CMakeDetermineCCompiler.cmake
 +++ b/Modules/CMakeDetermineCCompiler.cmake
-@@ -93,7 +93,13 @@ else()
+@@ -93,7 +93,28 @@ else()
      )
  endif()
  if(CMAKE_C_COMPILER_TARGET)
@@ -14,10 +14,25 @@ index 73b6ceec..30925ede 100644
 +  else()
 +    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "-c --target=${CMAKE_C_COMPILER_TARGET}")
 +  endif()
++endif()
++
++if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++  get_filename_component(COMPILER_BASENAME "${CMAKE_C_COMPILER}" NAME)
++  
++  # clang and ibm-clang64 use -m64 with ASCII flag
++  if(COMPILER_BASENAME MATCHES "^(clang|ibm-clang64)$")
++    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "-m64 -fzos-le-char-mode=ascii ${CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST}")
++  # ibm-clang (32-bit) uses -m32 with ASCII flag
++  elseif(COMPILER_BASENAME MATCHES "^ibm-clang$")
++    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "-m32 -fzos-le-char-mode=ascii ${CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST}")
++  # All others (xlc, xlclang) use -qascii
++  else()
++    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "-qascii ${CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST}")
++  endif()
  endif()
  # Build a small source file to identify the compiler.
  if(NOT CMAKE_C_COMPILER_ID_RUN)
-@@ -183,7 +189,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+@@ -183,7 +204,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
  
      # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
      # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
@@ -28,10 +43,10 @@ index 73b6ceec..30925ede 100644
      endif ()
    elseif(CMAKE_C_COMPILER_ID MATCHES "TI")
 diff --git a/Modules/CMakeDetermineCXXCompiler.cmake b/Modules/CMakeDetermineCXXCompiler.cmake
-index 891ba6e7..c451d403 100644
+index 891ba6e7..27e4d6ef 100644
 --- a/Modules/CMakeDetermineCXXCompiler.cmake
 +++ b/Modules/CMakeDetermineCXXCompiler.cmake
-@@ -95,7 +95,13 @@ else()
+@@ -95,7 +95,28 @@ else()
  endif()
  
  if(CMAKE_CXX_COMPILER_TARGET)
@@ -39,14 +54,29 @@ index 891ba6e7..c451d403 100644
 +  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
 +    # z/OS object files sometimes don't have continuous string literals, therefore
 +    # leads to some compiler info not being correctly parsed, so we should not use -c.
-+    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "--target=${CMAKE_C_COMPILER_TARGET}")
++    set(CMAKE_CXX_COMPILER_ID_TEST_FLAGS_FIRST "--target=${CMAKE_CXX_COMPILER_TARGET}")
 +  else()
-+    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "-c --target=${CMAKE_C_COMPILER_TARGET}")
++    set(CMAKE_CXX_COMPILER_ID_TEST_FLAGS_FIRST "-c --target=${CMAKE_CXX_COMPILER_TARGET}")
++  endif()
++endif()
++
++if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++  get_filename_component(COMPILER_BASENAME "${CMAKE_CXX_COMPILER}" NAME)
++  
++  # clang++ and ibm-clang++64 use -m64 with ASCII flag
++  if(COMPILER_BASENAME MATCHES "^(clang\\+\\+|ibm-clang\\+\\+64)$")
++    set(CMAKE_CXX_COMPILER_ID_TEST_FLAGS_FIRST "-m64 -fzos-le-char-mode=ascii ${CMAKE_CXX_COMPILER_ID_TEST_FLAGS_FIRST}")
++  # ibm-clang++ (32-bit) uses -m32 with ASCII flag
++  elseif(COMPILER_BASENAME MATCHES "^ibm-clang\\+\\+$")
++    set(CMAKE_CXX_COMPILER_ID_TEST_FLAGS_FIRST "-m32 -fzos-le-char-mode=ascii ${CMAKE_CXX_COMPILER_ID_TEST_FLAGS_FIRST}")
++  # All others (xlC, xlclang++) use -qascii
++  else()
++    set(CMAKE_CXX_COMPILER_ID_TEST_FLAGS_FIRST "-qascii ${CMAKE_CXX_COMPILER_ID_TEST_FLAGS_FIRST}")
 +  endif()
  endif()
  
  # Build a small source file to identify the compiler.
-@@ -188,7 +194,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+@@ -188,7 +209,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
  
      # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
      # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
@@ -57,21 +87,42 @@ index 891ba6e7..c451d403 100644
      endif ()
    elseif(CMAKE_CXX_COMPILER_ID MATCHES "TI")
 diff --git a/Modules/CMakeDetermineCompilerABI.cmake b/Modules/CMakeDetermineCompilerABI.cmake
-index 4a75e25a..8ca073d8 100644
+index 4a75e25a..46184fb3 100644
 --- a/Modules/CMakeDetermineCompilerABI.cmake
 +++ b/Modules/CMakeDetermineCompilerABI.cmake
-@@ -50,6 +50,15 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
+@@ -47,9 +47,36 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
+       # from which we might detect implicit link libraries.
+       list(APPEND CMAKE_FLAGS "-DCMAKE_${lang}_STANDARD_LIBRARIES=")
+     endif()
++
++    # Add Flag for z/OS compilers for ascii encoding of string literals.
++    if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++      # For Clang-based compilers, use -fzos-le-char-mode=ascii
++      if(CMAKE_${lang}_COMPILER_ID STREQUAL "Clang")
++        string(APPEND COMPILE_DEFINITIONS " -m64 -fzos-le-char-mode=ascii")
++        list(APPEND LINK_OPTIONS "-m64" "-fzos-le-char-mode=ascii")
++      elseif(CMAKE_${lang}_COMPILER_ID STREQUAL "IBMClang")
++        get_filename_component(COMPILER_BASENAME "${CMAKE_${lang}_COMPILER}" NAME)
++        if(COMPILER_BASENAME MATCHES "64$")
++          # ibm-clang64, ibm-clang++64
++          string(APPEND COMPILE_DEFINITIONS " -m64 -fzos-le-char-mode=ascii")
++          list(APPEND LINK_OPTIONS "-m64" "-fzos-le-char-mode=ascii")
++        else()
++          # ibm-clang, ibm-clang++
++          string(APPEND COMPILE_DEFINITIONS " -m32 -fzos-le-char-mode=ascii")
++          list(APPEND LINK_OPTIONS "-m32" "-fzos-le-char-mode=ascii")
++        endif()
++      # For traditional IBM compilers (zOS, XLClang), use -qascii
++      elseif(CMAKE_${lang}_COMPILER_ID MATCHES "^(zOS|XLClang)$")
++        string(APPEND COMPILE_DEFINITIONS " -qascii")
++        list(APPEND LINK_OPTIONS "-qascii")
++      endif()
++    endif()
++
      list(JOIN LINK_OPTIONS " " LINK_OPTIONS)
      list(APPEND CMAKE_FLAGS "-DEXE_LINKER_FLAGS=${LINK_OPTIONS}")
  
-+    # Add Flag for z/OS compilers for ascii encoding of string literals.
-+    if(CMAKE_SYSTEM_NAME MATCHES "OS390")
-+      if(CMAKE_${lang}_COMPILER_ID MATCHES "Clang")
-+        string(APPEND COMPILE_DEFINITIONS " -fzos-le-char-mode=ascii")
-+      elseif(CMAKE_${lang}_COMPILER_ID MATCHES "zOS")
-+        string(APPEND COMPILE_DEFINITIONS " -qascii")
-+      endif()
-+    endif()
++
 +
      __TestCompiler_setTryCompileTargetType()
  
@@ -1033,7 +1084,7 @@ index 3247b08c..4830c2cc 100644
 -
  #endif /* ZCONF_H */
 diff --git a/Utilities/cmzstd/lib/common/debug.h b/Utilities/cmzstd/lib/common/debug.h
-index 0e9817ea..ea8d240f 100644
+index 0e9817ea..cfcf5612 100644
 --- a/Utilities/cmzstd/lib/common/debug.h
 +++ b/Utilities/cmzstd/lib/common/debug.h
 @@ -70,7 +70,11 @@ extern "C" {
@@ -1042,7 +1093,7 @@ index 0e9817ea..ea8d240f 100644
  #else
 -#  ifndef assert   /* assert may be already defined, due to prior #include <assert.h> */
 +#  if !defined(assert) /* assert may be already defined, due to prior #include <assert.h> */
-+#  ifdef __MVS__ 
++#  ifdef __MVS__
 +#    define __assert 1 /* Indicate to the headers that we have our own assert */
 +#    define NDEBUG 1
 +#  endif
