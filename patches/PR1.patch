@@ -1,5 +1,5 @@
 diff --git a/Modules/CMakeDetermineCCompiler.cmake b/Modules/CMakeDetermineCCompiler.cmake
-index 73b6ceec77..30925ede05 100644
+index 73b6ceec..30925ede 100644
 --- a/Modules/CMakeDetermineCCompiler.cmake
 +++ b/Modules/CMakeDetermineCCompiler.cmake
 @@ -93,7 +93,13 @@ else()
@@ -28,7 +28,7 @@ index 73b6ceec77..30925ede05 100644
      endif ()
    elseif(CMAKE_C_COMPILER_ID MATCHES "TI")
 diff --git a/Modules/CMakeDetermineCXXCompiler.cmake b/Modules/CMakeDetermineCXXCompiler.cmake
-index 891ba6e759..c451d4031a 100644
+index 891ba6e7..c451d403 100644
 --- a/Modules/CMakeDetermineCXXCompiler.cmake
 +++ b/Modules/CMakeDetermineCXXCompiler.cmake
 @@ -95,7 +95,13 @@ else()
@@ -57,7 +57,7 @@ index 891ba6e759..c451d4031a 100644
      endif ()
    elseif(CMAKE_CXX_COMPILER_ID MATCHES "TI")
 diff --git a/Modules/CMakeDetermineCompilerABI.cmake b/Modules/CMakeDetermineCompilerABI.cmake
-index 4a75e25a92..8ca073d81f 100644
+index 4a75e25a..8ca073d8 100644
 --- a/Modules/CMakeDetermineCompilerABI.cmake
 +++ b/Modules/CMakeDetermineCompilerABI.cmake
 @@ -50,6 +50,15 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
@@ -77,7 +77,7 @@ index 4a75e25a92..8ca073d81f 100644
  
      # Avoid failing ABI detection on warnings.
 diff --git a/Modules/CMakeDetermineSystem.cmake b/Modules/CMakeDetermineSystem.cmake
-index b330ed9d50..d614a844bd 100644
+index b330ed9d..d614a844 100644
 --- a/Modules/CMakeDetermineSystem.cmake
 +++ b/Modules/CMakeDetermineSystem.cmake
 @@ -51,7 +51,7 @@ if(CMAKE_HOST_UNIX)
@@ -90,7 +90,7 @@ index b330ed9d50..d614a844bd 100644
          OUTPUT_VARIABLE CMAKE_HOST_SYSTEM_PROCESSOR
          RESULT_VARIABLE val
 diff --git a/Modules/CMakeFindBinUtils.cmake b/Modules/CMakeFindBinUtils.cmake
-index dc28f128d5..e9d175cb95 100644
+index 4efcd555..0f89cd9e 100644
 --- a/Modules/CMakeFindBinUtils.cmake
 +++ b/Modules/CMakeFindBinUtils.cmake
 @@ -174,7 +174,7 @@ else()
@@ -103,7 +103,7 @@ index dc28f128d5..e9d175cb95 100644
        list(PREPEND _CMAKE_LINKER_NAMES "lld-link")
      elseif(NOT APPLE)
 diff --git a/Modules/CMakePlatformId.h.in b/Modules/CMakePlatformId.h.in
-index fd0367e489..ea839592be 100644
+index 0d924124..8666cb4e 100644
 --- a/Modules/CMakePlatformId.h.in
 +++ b/Modules/CMakePlatformId.h.in
 @@ -35,6 +35,9 @@
@@ -127,7 +127,7 @@ index fd0367e489..ea839592be 100644
  #  define ARCHITECTURE_ID ""
  # endif
 diff --git a/Modules/CheckTypeSize.cmake b/Modules/CheckTypeSize.cmake
-index ee54d92e2e..17b3b367f4 100644
+index ee54d92e..17b3b367 100644
 --- a/Modules/CheckTypeSize.cmake
 +++ b/Modules/CheckTypeSize.cmake
 @@ -153,6 +153,16 @@ function(__check_type_size_impl type var map builtin language)
@@ -160,7 +160,7 @@ index ee54d92e2e..17b3b367f4 100644
      # The check compiled.  Load information from the binary.
      file(STRINGS ${bin} strings LIMIT_COUNT 10 REGEX "INFO:size")
 diff --git a/Modules/Compiler/Clang.cmake b/Modules/Compiler/Clang.cmake
-index e85cdb2a18..732234a672 100644
+index f834f7a7..9b504cce 100644
 --- a/Modules/Compiler/Clang.cmake
 +++ b/Modules/Compiler/Clang.cmake
 @@ -53,8 +53,13 @@ else()
@@ -180,7 +180,7 @@ index e85cdb2a18..732234a672 100644
      string(COMPARE EQUAL "${CMAKE_${lang}_COMPILER_ID}" "AppleClang" __is_apple_clang)
      string(COMPARE EQUAL "${CMAKE_${lang}_COMPILER_ID}" "FujitsuClang" __is_fujitsu_clang)
 diff --git a/Modules/Compiler/IBMClang-CXX.cmake b/Modules/Compiler/IBMClang-CXX.cmake
-index ec97381bd7..8c780dce03 100644
+index ec97381b..8c780dce 100644
 --- a/Modules/Compiler/IBMClang-CXX.cmake
 +++ b/Modules/Compiler/IBMClang-CXX.cmake
 @@ -28,7 +28,8 @@ set(CMAKE_CXX14_EXTENSION_COMPILE_OPTION "-std=gnu++14")
@@ -208,7 +208,7 @@ index ec97381bd7..8c780dce03 100644
    "<CMAKE_CXX_COMPILER> -x c++ <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>")
 diff --git a/Modules/Compiler/zOS-C.cmake b/Modules/Compiler/zOS-C.cmake
 new file mode 100644
-index 0000000000..73928346d2
+index 00000000..73928346
 --- /dev/null
 +++ b/Modules/Compiler/zOS-C.cmake
 @@ -0,0 +1,7 @@
@@ -221,7 +221,7 @@ index 0000000000..73928346d2
 +set(CMAKE_PLATFORM_CHECK_INCLUDE_C_FLAGS "-qseverity=e=ccn3296")
 diff --git a/Modules/Compiler/zOS-CXX.cmake b/Modules/Compiler/zOS-CXX.cmake
 new file mode 100644
-index 0000000000..de82177f25
+index 00000000..de82177f
 --- /dev/null
 +++ b/Modules/Compiler/zOS-CXX.cmake
 @@ -0,0 +1,39 @@
@@ -266,7 +266,7 @@ index 0000000000..de82177f25
 +endif()
 diff --git a/Modules/Compiler/zOS.cmake b/Modules/Compiler/zOS.cmake
 new file mode 100644
-index 0000000000..4a59c33f60
+index 00000000..4a59c33f
 --- /dev/null
 +++ b/Modules/Compiler/zOS.cmake
 @@ -0,0 +1,33 @@
@@ -304,7 +304,7 @@ index 0000000000..4a59c33f60
 +  set(CMAKE_DEPFILE_FLAGS_${lang} "-MF <DEPFILE> -qmakedep=gcc")
 +endmacro()
 diff --git a/Modules/FindThreads.cmake b/Modules/FindThreads.cmake
-index 0fa6ae7661..170acd2f21 100644
+index 0fa6ae76..170acd2f 100644
 --- a/Modules/FindThreads.cmake
 +++ b/Modules/FindThreads.cmake
 @@ -68,6 +68,10 @@ endif()
@@ -332,7 +332,7 @@ index 0fa6ae7661..170acd2f21 100644
      # Use libcma if it exists and can be used.  It provides more
 diff --git a/Modules/Platform/OS390.cmake b/Modules/Platform/OS390.cmake
 new file mode 100644
-index 0000000000..1773726a86
+index 00000000..1773726a
 --- /dev/null
 +++ b/Modules/Platform/OS390.cmake
 @@ -0,0 +1,37 @@
@@ -374,7 +374,7 @@ index 0000000000..1773726a86
 +set(_CXX_CCMODE ON)
 +set(_C89_CCMODE ON)
 diff --git a/README.rst b/README.rst
-index 8a471db0e9..955cb17ec6 100644
+index 8a471db0..955cb17e 100644
 --- a/README.rst
 +++ b/README.rst
 @@ -39,6 +39,7 @@ Supported Platforms
@@ -386,7 +386,7 @@ index 8a471db0e9..955cb17ec6 100644
  Other UNIX-like operating systems may work too out of the box, if not
  it should not be a major problem to port CMake to this platform.
 diff --git a/Source/CMakeVersion.cmake b/Source/CMakeVersion.cmake
-index 5755e5a023..e33e436e53 100644
+index f4fca316..b529fd45 100644
 --- a/Source/CMakeVersion.cmake
 +++ b/Source/CMakeVersion.cmake
 @@ -80,5 +80,9 @@ else()
@@ -401,7 +401,7 @@ index 5755e5a023..e33e436e53 100644
 +  endif()
  endif()
 diff --git a/Source/CursesDialog/form/form.h b/Source/CursesDialog/form/form.h
-index b590c97852..7e36502d6c 100644
+index b590c978..7e36502d 100644
 --- a/Source/CursesDialog/form/form.h
 +++ b/Source/CursesDialog/form/form.h
 @@ -50,7 +50,17 @@
@@ -423,7 +423,7 @@ index b590c97852..7e36502d6c 100644
  #   undef _XOPEN_SOURCE_EXTENDED
  #  endif
 diff --git a/Source/CursesDialog/form/frm_driver.c b/Source/CursesDialog/form/frm_driver.c
-index 9cbb12ff98..d8e1c3572b 100644
+index 9cbb12ff..d8e1c357 100644
 --- a/Source/CursesDialog/form/frm_driver.c
 +++ b/Source/CursesDialog/form/frm_driver.c
 @@ -865,7 +865,7 @@ static int Display_Or_Erase_Field(FIELD * field, bool bEraseFlag)
@@ -436,7 +436,7 @@ index 9cbb12ff98..d8e1c3572b 100644
          attr_t fwinAttrs;
          short  fwinPair;
 diff --git a/Source/cmGeneratorTarget.cxx b/Source/cmGeneratorTarget.cxx
-index fb92771b03..566076ab3d 100644
+index 39f0b46d..52bdcff5 100644
 --- a/Source/cmGeneratorTarget.cxx
 +++ b/Source/cmGeneratorTarget.cxx
 @@ -261,7 +261,8 @@ const char* cmGeneratorTarget::GetOutputTargetType(
@@ -450,7 +450,7 @@ index fb92771b03..566076ab3d 100644
              // A DLL import library is treated as an archive target.
              return "ARCHIVE";
 diff --git a/Source/cmInstallCommand.cxx b/Source/cmInstallCommand.cxx
-index 9a797a7732..5b95a06cd5 100644
+index 9a797a77..5b95a06c 100644
 --- a/Source/cmInstallCommand.cxx
 +++ b/Source/cmInstallCommand.cxx
 @@ -137,6 +137,7 @@ public:
@@ -515,7 +515,7 @@ index 9a797a7732..5b95a06cd5 100644
    const cmInstallCommandArguments* args, const std::string& type) const
  {
 diff --git a/Source/cmLoadCommandCommand.cxx b/Source/cmLoadCommandCommand.cxx
-index 81edea5b61..0b2f23fc29 100644
+index 3e994514..1d8fb847 100644
 --- a/Source/cmLoadCommandCommand.cxx
 +++ b/Source/cmLoadCommandCommand.cxx
 @@ -1,7 +1,7 @@
@@ -528,7 +528,7 @@ index 81edea5b61..0b2f23fc29 100644
  // NOLINTNEXTLINE(bugprone-reserved-identifier)
  #  define _POSIX_C_SOURCE 200809L
 diff --git a/Source/cmStandardLexer.h b/Source/cmStandardLexer.h
-index 27225280d6..77ba6c9067 100644
+index e39deb0a..0cb0f2eb 100644
 --- a/Source/cmStandardLexer.h
 +++ b/Source/cmStandardLexer.h
 @@ -8,7 +8,7 @@
@@ -541,7 +541,7 @@ index 27225280d6..77ba6c9067 100644
  // NOLINTNEXTLINE(bugprone-reserved-identifier)
  #  define _POSIX_C_SOURCE 200809L
 diff --git a/Source/cmSystemTools.cxx b/Source/cmSystemTools.cxx
-index 5ad0439c9e..5e1769e43c 100644
+index 907c24d0..6b60beb4 100644
 --- a/Source/cmSystemTools.cxx
 +++ b/Source/cmSystemTools.cxx
 @@ -1,7 +1,7 @@
@@ -553,7 +553,7 @@ index 5ad0439c9e..5e1769e43c 100644
  // POSIX APIs are needed
  // NOLINTNEXTLINE(bugprone-reserved-identifier)
  #  define _POSIX_C_SOURCE 200809L
-@@ -3773,6 +3773,14 @@ cm::string_view cmSystemTools::GetSystemName()
+@@ -3776,6 +3776,14 @@ cm::string_view cmSystemTools::GetSystemName()
      if (systemName.find("kFreeBSD") != cm::string_view::npos) {
        systemName = "kFreeBSD";
      }
@@ -569,7 +569,7 @@ index 5ad0439c9e..5e1769e43c 100644
    }
    return "";
 diff --git a/Source/cmTimestamp.cxx b/Source/cmTimestamp.cxx
-index 4d8bc027d8..e731771c71 100644
+index e3e3e253..98809597 100644
 --- a/Source/cmTimestamp.cxx
 +++ b/Source/cmTimestamp.cxx
 @@ -1,7 +1,7 @@
@@ -582,7 +582,7 @@ index 4d8bc027d8..e731771c71 100644
  // NOLINTNEXTLINE(bugprone-reserved-identifier)
  #  define _POSIX_C_SOURCE 200809L
 diff --git a/Source/cm_fileno.cxx b/Source/cm_fileno.cxx
-index a40c5ca676..242f524e58 100644
+index a40c5ca6..242f524e 100644
 --- a/Source/cm_fileno.cxx
 +++ b/Source/cm_fileno.cxx
 @@ -1,7 +1,7 @@
@@ -595,7 +595,7 @@ index a40c5ca676..242f524e58 100644
  // NOLINTNEXTLINE(bugprone-reserved-identifier)
  #  define _POSIX_C_SOURCE 200809L
 diff --git a/Source/kwsys/ProcessUNIX.c b/Source/kwsys/ProcessUNIX.c
-index efe22334f2..5c548e105b 100644
+index efe22334..5c548e10 100644
 --- a/Source/kwsys/ProcessUNIX.c
 +++ b/Source/kwsys/ProcessUNIX.c
 @@ -2503,7 +2503,7 @@ static pid_t kwsysProcessFork(kwsysProcess* cp,
@@ -608,7 +608,7 @@ index efe22334f2..5c548e105b 100644
  #  define KWSYSPE_PS_FORMAT "%d %d\n"
  #elif defined(__hpux) || defined(__sun__) || defined(__sgi) ||                \
 diff --git a/Source/kwsys/SystemTools.cxx b/Source/kwsys/SystemTools.cxx
-index 6cc103df51..ef82bd543f 100644
+index 6cc103df..ef82bd54 100644
 --- a/Source/kwsys/SystemTools.cxx
 +++ b/Source/kwsys/SystemTools.cxx
 @@ -18,6 +18,10 @@
@@ -708,7 +708,7 @@ index 6cc103df51..ef82bd543f 100644
        return status;
      }
 diff --git a/Source/kwsys/SystemTools.hxx.in b/Source/kwsys/SystemTools.hxx.in
-index 294ffca326..3d5cd3a28b 100644
+index 294ffca3..3d5cd3a2 100644
 --- a/Source/kwsys/SystemTools.hxx.in
 +++ b/Source/kwsys/SystemTools.hxx.in
 @@ -667,6 +667,13 @@ public:
@@ -726,7 +726,7 @@ index 294ffca326..3d5cd3a28b 100644
     * Copy a file.
     */
 diff --git a/Utilities/cmcurl/include/curl/system.h b/Utilities/cmcurl/include/curl/system.h
-index e5be256845..1fa376b67a 100644
+index e5be2568..1fa376b6 100644
 --- a/Utilities/cmcurl/include/curl/system.h
 +++ b/Utilities/cmcurl/include/curl/system.h
 @@ -439,7 +439,6 @@
@@ -738,7 +738,7 @@ index e5be256845..1fa376b67a 100644
  #ifdef CURL_TYPEOF_CURL_OFF_T
    typedef CURL_TYPEOF_CURL_OFF_T curl_off_t;
 diff --git a/Utilities/cmcurl/lib/curl_setup.h b/Utilities/cmcurl/lib/curl_setup.h
-index 01b9015fcb..bfd6208919 100644
+index 01b9015f..bfd62089 100644
 --- a/Utilities/cmcurl/lib/curl_setup.h
 +++ b/Utilities/cmcurl/lib/curl_setup.h
 @@ -568,6 +568,10 @@
@@ -753,7 +753,7 @@ index 01b9015fcb..bfd6208919 100644
  #error "too small curl_off_t"
  #else
 diff --git a/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c b/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c
-index eea8259fff..e844d3cac2 100644
+index 4cf00801..76c11f61 100644
 --- a/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c
 +++ b/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c
 @@ -1541,7 +1541,7 @@ set_statvfs_transfer_size(struct filesystem *fs, const struct statvfs *sfs)
@@ -775,7 +775,7 @@ index eea8259fff..e844d3cac2 100644
  /*
   * Gather current filesystem properties on NetBSD
 diff --git a/Utilities/cmlibarchive/libarchive/filter_fork_posix.c b/Utilities/cmlibarchive/libarchive/filter_fork_posix.c
-index c895c08e59..c558fff9a7 100644
+index c895c08e..c558fff9 100644
 --- a/Utilities/cmlibarchive/libarchive/filter_fork_posix.c
 +++ b/Utilities/cmlibarchive/libarchive/filter_fork_posix.c
 @@ -28,7 +28,7 @@
@@ -788,7 +788,7 @@ index c895c08e59..c558fff9a7 100644
  #if defined(HAVE_SYS_TYPES_H)
  #  include <sys/types.h>
 diff --git a/Utilities/cmlibrhash/librhash/rhash.c b/Utilities/cmlibrhash/librhash/rhash.c
-index 4e60c213bf..847451c776 100644
+index 4e60c213..847451c7 100644
 --- a/Utilities/cmlibrhash/librhash/rhash.c
 +++ b/Utilities/cmlibrhash/librhash/rhash.c
 @@ -527,7 +527,7 @@ RHASH_API int rhash_file_update(rhash ctx, FILE* fd)
@@ -801,7 +801,7 @@ index 4e60c213bf..847451c776 100644
  
  RHASH_API int rhash_file(unsigned hash_id, const char* filepath, unsigned char* result)
 diff --git a/Utilities/cmlibrhash/librhash/util.h b/Utilities/cmlibrhash/librhash/util.h
-index 4da1be69fa..1caff2e632 100644
+index 4da1be69..1caff2e6 100644
 --- a/Utilities/cmlibrhash/librhash/util.h
 +++ b/Utilities/cmlibrhash/librhash/util.h
 @@ -13,7 +13,7 @@ extern "C" {
@@ -832,7 +832,7 @@ index 4da1be69fa..1caff2e632 100644
  #  define HAS_POSIX_ALIGNED_ALLOC
  #  define rhash_aligned_alloc(alignment, size) rhash_px_aalloc((alignment), ALIGN_SIZE_BY(size, sizeof(void*)))
 diff --git a/Utilities/cmlibuv/CMakeLists.txt b/Utilities/cmlibuv/CMakeLists.txt
-index a0b161b5c0..052b28707b 100644
+index a0b161b5..052b2870 100644
 --- a/Utilities/cmlibuv/CMakeLists.txt
 +++ b/Utilities/cmlibuv/CMakeLists.txt
 @@ -139,6 +139,33 @@ if(CMAKE_SYSTEM_NAME STREQUAL "AIX")
@@ -870,7 +870,7 @@ index a0b161b5c0..052b28707b 100644
    list(APPEND uv_headers
      include/uv/posix.h
 diff --git a/Utilities/cmlibuv/include/uv/posix.h b/Utilities/cmlibuv/include/uv/posix.h
-index 9a96634db0..98248bff05 100644
+index 9a96634d..98248bff 100644
 --- a/Utilities/cmlibuv/include/uv/posix.h
 +++ b/Utilities/cmlibuv/include/uv/posix.h
 @@ -22,6 +22,10 @@
@@ -885,7 +885,7 @@ index 9a96634db0..98248bff05 100644
    struct pollfd* poll_fds;                                                    \
    size_t poll_fds_used;                                                       \
 diff --git a/Utilities/cmlibuv/src/unix/core.c b/Utilities/cmlibuv/src/unix/core.c
-index 83e8b611aa..3c4bd795a8 100644
+index 83e8b611..3c4bd795 100644
 --- a/Utilities/cmlibuv/src/unix/core.c
 +++ b/Utilities/cmlibuv/src/unix/core.c
 @@ -88,6 +88,7 @@ extern char** environ;
@@ -897,10 +897,18 @@ index 83e8b611aa..3c4bd795a8 100644
  #endif
  
 diff --git a/Utilities/cmlibuv/src/unix/os390-syscalls.c b/Utilities/cmlibuv/src/unix/os390-syscalls.c
-index 5861aaaa20..c40b8d1775 100644
+index 5861aaaa..bc5acdac 100644
 --- a/Utilities/cmlibuv/src/unix/os390-syscalls.c
 +++ b/Utilities/cmlibuv/src/unix/os390-syscalls.c
-@@ -137,11 +137,16 @@ static void maybe_resize(uv__os390_epoll* lst, unsigned int len) {
+@@ -21,6 +21,7 @@
+ 
+ 
+ #include "os390-syscalls.h"
++#include <unistd.h>
+ #include <errno.h>
+ #include <stdlib.h>
+ #include <search.h>
+@@ -137,11 +138,16 @@ static void maybe_resize(uv__os390_epoll* lst, unsigned int len) {
  
  
  void uv__os390_cleanup(void) {
@@ -917,7 +925,7 @@ index 5861aaaa20..c40b8d1775 100644
    struct {
      long int header;
      char body;
-@@ -164,6 +169,7 @@ static void init_message_queue(uv__os390_epoll* lst) {
+@@ -164,6 +170,7 @@ static void init_message_queue(uv__os390_epoll* lst) {
    /* Clean up the dummy message sent above */
    if (msgrcv(lst->msg_queue, &msg, sizeof(msg.body), 0, 0) != sizeof(msg.body))
      abort();
@@ -925,7 +933,7 @@ index 5861aaaa20..c40b8d1775 100644
  }
  
  
-@@ -375,7 +381,9 @@ void epoll_queue_close(uv__os390_epoll* lst) {
+@@ -375,7 +382,9 @@ void epoll_queue_close(uv__os390_epoll* lst) {
    uv_mutex_unlock(&global_epoll_lock);
  
    /* Free resources */
@@ -936,7 +944,7 @@ index 5861aaaa20..c40b8d1775 100644
    uv__free(lst->items);
    lst->items = NULL;
 diff --git a/Utilities/cmlibuv/src/unix/os390-syscalls.h b/Utilities/cmlibuv/src/unix/os390-syscalls.h
-index 9f504171d8..d467af9c45 100644
+index 9f504171..ee0e6ae2 100644
 --- a/Utilities/cmlibuv/src/unix/os390-syscalls.h
 +++ b/Utilities/cmlibuv/src/unix/os390-syscalls.h
 @@ -28,7 +28,6 @@
@@ -947,16 +955,46 @@ index 9f504171d8..d467af9c45 100644
  
  #define EPOLL_CTL_ADD             1
  #define EPOLL_CTL_DEL             2
-@@ -58,6 +57,7 @@ int epoll_wait(uv__os390_epoll* ep, struct epoll_event *events, int maxevents, i
+@@ -56,8 +55,10 @@ uv__os390_epoll* epoll_create1(int flags);
+ int epoll_ctl(uv__os390_epoll* ep, int op, int fd, struct epoll_event *event);
+ int epoll_wait(uv__os390_epoll* ep, struct epoll_event *events, int maxevents, int timeout);
  int epoll_file_close(int fd);
++void epoll_queue_close(uv__os390_epoll* lst);
  
  /* utility functions */
 +int nanosleep(const struct timespec* req, struct timespec* rem);
  int scandir(const char* maindir, struct dirent*** namelist,
              int (*filter)(const struct dirent *),
              int (*compar)(const struct dirent **,
+diff --git a/Utilities/cmlibuv/src/unix/process.c b/Utilities/cmlibuv/src/unix/process.c
+index ebe185d6..26606667 100644
+--- a/Utilities/cmlibuv/src/unix/process.c
++++ b/Utilities/cmlibuv/src/unix/process.c
+@@ -60,7 +60,7 @@
+ extern char **environ;
+ #endif
+ 
+-#if defined(__linux__) || defined(__GLIBC__)
++#if defined(__linux__) || defined(__GLIBC__) || defined(__MVS__)
+ # include <grp.h>
+ #endif
+ 
+diff --git a/Utilities/cmlibuv/src/uv-common.c b/Utilities/cmlibuv/src/uv-common.c
+index d8f7b0e4..6e591a6a 100644
+--- a/Utilities/cmlibuv/src/uv-common.c
++++ b/Utilities/cmlibuv/src/uv-common.c
+@@ -37,6 +37,9 @@
+ # include <sys/un.h> /* AF_UNIX, sockaddr_un */
+ #endif
+ 
++#if defined(__MVS__)
++# include "os390-syscalls.h"
++#endif
+ 
+ typedef struct {
+   uv_malloc_func local_malloc;
 diff --git a/Utilities/cmzlib/zconf.h b/Utilities/cmzlib/zconf.h
-index 3247b08c50..4830c2cc61 100644
+index 3247b08c..4830c2cc 100644
 --- a/Utilities/cmzlib/zconf.h
 +++ b/Utilities/cmzlib/zconf.h
 @@ -525,21 +525,4 @@ typedef uLong FAR uLongf;
@@ -982,7 +1020,7 @@ index 3247b08c50..4830c2cc61 100644
 -
  #endif /* ZCONF_H */
 diff --git a/Utilities/cmzstd/lib/common/debug.h b/Utilities/cmzstd/lib/common/debug.h
-index 0e9817ea6d..4e9d718eed 100644
+index 0e9817ea..4e9d718e 100644
 --- a/Utilities/cmzstd/lib/common/debug.h
 +++ b/Utilities/cmzstd/lib/common/debug.h
 @@ -70,7 +70,10 @@ extern "C" {
@@ -998,7 +1036,7 @@ index 0e9817ea6d..4e9d718eed 100644
  #  endif
  #endif
 diff --git a/Utilities/cmzstd/lib/common/zstd_trace.h b/Utilities/cmzstd/lib/common/zstd_trace.h
-index da20534ebd..5bd36cd87a 100644
+index da20534e..5bd36cd8 100644
 --- a/Utilities/cmzstd/lib/common/zstd_trace.h
 +++ b/Utilities/cmzstd/lib/common/zstd_trace.h
 @@ -29,7 +29,7 @@ extern "C" {
@@ -1011,7 +1049,7 @@ index da20534ebd..5bd36cd87a 100644
  #else
  #  define ZSTD_HAVE_WEAK_SYMBOLS 0
 diff --git a/bootstrap b/bootstrap
-index 53358d547b..97e8a20779 100755
+index 53358d54..97e8a207 100755
 --- a/bootstrap
 +++ b/bootstrap
 @@ -172,6 +172,13 @@ else
