@@ -1,8 +1,20 @@
 diff --git a/Modules/CMakeDetermineCCompiler.cmake b/Modules/CMakeDetermineCCompiler.cmake
-index 73b6ceec..30925ede 100644
+index 73b6ceec..793e1efb 100644
 --- a/Modules/CMakeDetermineCCompiler.cmake
 +++ b/Modules/CMakeDetermineCCompiler.cmake
-@@ -93,7 +93,13 @@ else()
+@@ -76,6 +76,11 @@ else()
+   set(CMAKE_C_COMPILER_ID_TEST_FLAGS
+     # Try compiling to an object file only.
+     "-c"
++    
++    "-fzos-le-char-mode=ascii"
++    "-m32 -fzos-le-char-mode=ascii"
++    "-m64 -fzos-le-char-mode=ascii"
++    "-qascii"
+ 
+     # Try enabling ANSI mode on HP.
+     "-Aa"
+@@ -93,7 +98,13 @@ else()
      )
  endif()
  if(CMAKE_C_COMPILER_TARGET)
@@ -17,7 +29,7 @@ index 73b6ceec..30925ede 100644
  endif()
  # Build a small source file to identify the compiler.
  if(NOT CMAKE_C_COMPILER_ID_RUN)
-@@ -183,7 +189,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+@@ -183,7 +194,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
  
      # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
      # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
@@ -28,10 +40,23 @@ index 73b6ceec..30925ede 100644
      endif ()
    elseif(CMAKE_C_COMPILER_ID MATCHES "TI")
 diff --git a/Modules/CMakeDetermineCXXCompiler.cmake b/Modules/CMakeDetermineCXXCompiler.cmake
-index 891ba6e7..c451d403 100644
+index 891ba6e7..69654bed 100644
 --- a/Modules/CMakeDetermineCXXCompiler.cmake
 +++ b/Modules/CMakeDetermineCXXCompiler.cmake
-@@ -95,7 +95,13 @@ else()
+@@ -80,6 +80,12 @@ else()
+   set(CMAKE_CXX_COMPILER_ID_TEST_FLAGS
+     # Try compiling to an object file only.
+     "-c"
++
++    "-fzos-le-char-mode=ascii"
++    "-m32 -fzos-le-char-mode=ascii"
++    "-m64 -fzos-le-char-mode=ascii"
++    "-qascii"
++
+     # IAR does not detect language automatically
+     "--c++"
+     "--ec++"
+@@ -95,7 +101,13 @@ else()
  endif()
  
  if(CMAKE_CXX_COMPILER_TARGET)
@@ -46,7 +71,7 @@ index 891ba6e7..c451d403 100644
  endif()
  
  # Build a small source file to identify the compiler.
-@@ -188,7 +194,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+@@ -188,7 +200,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
  
      # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
      # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
@@ -57,25 +82,31 @@ index 891ba6e7..c451d403 100644
      endif ()
    elseif(CMAKE_CXX_COMPILER_ID MATCHES "TI")
 diff --git a/Modules/CMakeDetermineCompilerABI.cmake b/Modules/CMakeDetermineCompilerABI.cmake
-index 4a75e25a..8ca073d8 100644
+index 4a75e25a..5a0b2643 100644
 --- a/Modules/CMakeDetermineCompilerABI.cmake
 +++ b/Modules/CMakeDetermineCompilerABI.cmake
-@@ -50,6 +50,15 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
-     list(JOIN LINK_OPTIONS " " LINK_OPTIONS)
-     list(APPEND CMAKE_FLAGS "-DEXE_LINKER_FLAGS=${LINK_OPTIONS}")
- 
+@@ -31,6 +31,21 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
+     if(DEFINED CMAKE_${lang}_VERBOSE_LINK_FLAG)
+       list(APPEND LINK_OPTIONS "${CMAKE_${lang}_VERBOSE_LINK_FLAG}")
+     endif()
 +    # Add Flag for z/OS compilers for ascii encoding of string literals.
 +    if(CMAKE_SYSTEM_NAME MATCHES "OS390")
 +      if(CMAKE_${lang}_COMPILER_ID MATCHES "Clang")
-+        string(APPEND COMPILE_DEFINITIONS " -fzos-le-char-mode=ascii")
++        get_filename_component(COMPILER_BASENAME "${CMAKE_${lang}_COMPILER}" NAME)
++        if(COMPILER_BASENAME STREQUAL "ibm-clang" OR COMPILER_BASENAME STREQUAL "ibm-clang++")
++          string(APPEND COMPILE_DEFINITIONS " -m32 -fzos-le-char-mode=ascii")
++          list(APPEND LINK_OPTIONS " -m32")
++        else()
++          string(APPEND COMPILE_DEFINITIONS " -fzos-le-char-mode=ascii")
++        endif()
 +      elseif(CMAKE_${lang}_COMPILER_ID MATCHES "zOS")
 +        string(APPEND COMPILE_DEFINITIONS " -qascii")
++        list(APPEND LINK_OPTIONS " -qascii")
 +      endif()
 +    endif()
-+
-     __TestCompiler_setTryCompileTargetType()
- 
-     # Avoid failing ABI detection on warnings.
+     if(lang MATCHES "^(CUDA|HIP)$")
+       if(CMAKE_CUDA_ARCHITECTURES STREQUAL "native")
+         # We are about to detect the native architectures, so we do
 diff --git a/Modules/CMakeDetermineSystem.cmake b/Modules/CMakeDetermineSystem.cmake
 index b330ed9d..d614a844 100644
 --- a/Modules/CMakeDetermineSystem.cmake
@@ -332,10 +363,10 @@ index 0fa6ae76..170acd2f 100644
      # Use libcma if it exists and can be used.  It provides more
 diff --git a/Modules/Platform/OS390.cmake b/Modules/Platform/OS390.cmake
 new file mode 100644
-index 00000000..1773726a
+index 00000000..34499288
 --- /dev/null
 +++ b/Modules/Platform/OS390.cmake
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,40 @@
 +set(OS390 1)
 +set(ZOS 1)
 +
@@ -373,6 +404,9 @@ index 00000000..1773726a
 +set(_CC_CCMODE ON)
 +set(_CXX_CCMODE ON)
 +set(_C89_CCMODE ON)
++set(ENV{_CC_CCMODE} 1)
++set(ENV{_CXX_CCMODE} 1)
++set(ENV{_C89_CCMODE} 1)
 diff --git a/README.rst b/README.rst
 index 8a471db0..955cb17e 100644
 --- a/README.rst
