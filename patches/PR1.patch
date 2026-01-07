@@ -1,20 +1,20 @@
 diff --git a/Modules/CMakeDetermineCCompiler.cmake b/Modules/CMakeDetermineCCompiler.cmake
-index 73b6ceec..793e1efb 100644
+index fbe51662..51d8ec48 100644
 --- a/Modules/CMakeDetermineCCompiler.cmake
 +++ b/Modules/CMakeDetermineCCompiler.cmake
 @@ -76,6 +76,11 @@ else()
-   set(CMAKE_C_COMPILER_ID_TEST_FLAGS
      # Try compiling to an object file only.
      "-c"
-+    
+ 
 +    "-fzos-le-char-mode=ascii"
 +    "-m32 -fzos-le-char-mode=ascii"
 +    "-m64 -fzos-le-char-mode=ascii"
 +    "-qascii"
- 
++
      # Try enabling ANSI mode on HP.
      "-Aa"
-@@ -93,7 +98,13 @@ else()
+ 
+@@ -92,7 +97,13 @@ else()
      )
  endif()
  if(CMAKE_C_COMPILER_TARGET)
@@ -29,7 +29,7 @@ index 73b6ceec..793e1efb 100644
  endif()
  # Build a small source file to identify the compiler.
  if(NOT CMAKE_C_COMPILER_ID_RUN)
-@@ -183,7 +194,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+@@ -182,7 +193,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
  
      # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
      # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
@@ -40,10 +40,10 @@ index 73b6ceec..793e1efb 100644
      endif ()
    elseif(CMAKE_C_COMPILER_ID MATCHES "TI")
 diff --git a/Modules/CMakeDetermineCXXCompiler.cmake b/Modules/CMakeDetermineCXXCompiler.cmake
-index 891ba6e7..69654bed 100644
+index 53316813..11f5835c 100644
 --- a/Modules/CMakeDetermineCXXCompiler.cmake
 +++ b/Modules/CMakeDetermineCXXCompiler.cmake
-@@ -80,6 +80,12 @@ else()
+@@ -79,6 +79,12 @@ else()
    set(CMAKE_CXX_COMPILER_ID_TEST_FLAGS
      # Try compiling to an object file only.
      "-c"
@@ -56,7 +56,7 @@ index 891ba6e7..69654bed 100644
      # IAR does not detect language automatically
      "--c++"
      "--ec++"
-@@ -95,7 +101,13 @@ else()
+@@ -94,7 +100,13 @@ else()
  endif()
  
  if(CMAKE_CXX_COMPILER_TARGET)
@@ -71,7 +71,7 @@ index 891ba6e7..69654bed 100644
  endif()
  
  # Build a small source file to identify the compiler.
-@@ -188,7 +200,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+@@ -187,7 +199,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
  
      # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
      # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
@@ -82,7 +82,7 @@ index 891ba6e7..69654bed 100644
      endif ()
    elseif(CMAKE_CXX_COMPILER_ID MATCHES "TI")
 diff --git a/Modules/CMakeDetermineCompilerABI.cmake b/Modules/CMakeDetermineCompilerABI.cmake
-index 4a75e25a..5a0b2643 100644
+index 2d89f9d0..4cab0c8f 100644
 --- a/Modules/CMakeDetermineCompilerABI.cmake
 +++ b/Modules/CMakeDetermineCompilerABI.cmake
 @@ -31,6 +31,21 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
@@ -108,7 +108,7 @@ index 4a75e25a..5a0b2643 100644
        if(CMAKE_CUDA_ARCHITECTURES STREQUAL "native")
          # We are about to detect the native architectures, so we do
 diff --git a/Modules/CMakeDetermineSystem.cmake b/Modules/CMakeDetermineSystem.cmake
-index b330ed9d..d614a844 100644
+index dc26258e..8a908f30 100644
 --- a/Modules/CMakeDetermineSystem.cmake
 +++ b/Modules/CMakeDetermineSystem.cmake
 @@ -51,7 +51,7 @@ if(CMAKE_HOST_UNIX)
@@ -121,20 +121,20 @@ index b330ed9d..d614a844 100644
          OUTPUT_VARIABLE CMAKE_HOST_SYSTEM_PROCESSOR
          RESULT_VARIABLE val
 diff --git a/Modules/CMakeFindBinUtils.cmake b/Modules/CMakeFindBinUtils.cmake
-index 4efcd555..0f89cd9e 100644
+index 91543a68..b73cfebd 100644
 --- a/Modules/CMakeFindBinUtils.cmake
 +++ b/Modules/CMakeFindBinUtils.cmake
-@@ -174,7 +174,7 @@ else()
+@@ -187,7 +187,7 @@ else()
    set(_CMAKE_TAPI_NAMES "tapi")
  
    # Prepend toolchain-specific names.
--  if("${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_COMPILER_ID}" STREQUAL Clang)
-+  if("${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_COMPILER_ID}" STREQUAL Clang AND NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
+-  if("x${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_COMPILER_ID}" MATCHES "^x(Clang|IntelLLVM|LLVMFlang)$")
++  if("x${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_COMPILER_ID}" MATCHES "^x(Clang|IntelLLVM|LLVMFlang)$" AND NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
      if("x${CMAKE_${_CMAKE_PROCESSING_LANGUAGE}_SIMULATE_ID}" STREQUAL "xMSVC")
        list(PREPEND _CMAKE_LINKER_NAMES "lld-link")
      elseif(NOT APPLE)
 diff --git a/Modules/CMakePlatformId.h.in b/Modules/CMakePlatformId.h.in
-index 0d924124..8666cb4e 100644
+index 1504d04c..53f003a4 100644
 --- a/Modules/CMakePlatformId.h.in
 +++ b/Modules/CMakePlatformId.h.in
 @@ -35,6 +35,9 @@
@@ -158,12 +158,12 @@ index 0d924124..8666cb4e 100644
  #  define ARCHITECTURE_ID ""
  # endif
 diff --git a/Modules/CheckTypeSize.cmake b/Modules/CheckTypeSize.cmake
-index ee54d92e..17b3b367 100644
+index 1f5a6228..cd6ba969 100644
 --- a/Modules/CheckTypeSize.cmake
 +++ b/Modules/CheckTypeSize.cmake
-@@ -153,6 +153,16 @@ function(__check_type_size_impl type var map builtin language)
+@@ -345,6 +345,16 @@ function(__check_type_size_impl type var result_var map builtin language)
    set(bin ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CheckTypeSize/${var}.bin)
-   file(READ ${__check_type_size_dir}/CheckTypeSize.c.in src_content)
+   file(READ ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/CheckTypeSize.c.in src_content)
    string(CONFIGURE "${src_content}" src_content @ONLY)
 +  # Add Flag for z/OS compilers for ascii encoding of string literals.
 +  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
@@ -175,10 +175,10 @@ index ee54d92e..17b3b367 100644
 +      string(APPEND CMAKE_C_FLAGS " -qASCII")
 +    endif()
 +  endif()
-   try_compile(HAVE_${var} SOURCE_FROM_VAR "${src}" src_content
+   try_compile(${result_var} SOURCE_FROM_VAR "${src}" src_content
      COMPILE_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
      LINK_OPTIONS ${CMAKE_REQUIRED_LINK_OPTIONS}
-@@ -165,6 +175,11 @@ function(__check_type_size_impl type var map builtin language)
+@@ -357,6 +367,11 @@ function(__check_type_size_impl type var result_var map builtin language)
      )
    unset(_CTS_LINK_DIRECTORIES)
  
@@ -187,11 +187,11 @@ index ee54d92e..17b3b367 100644
 +    set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS_SAVE})
 +  endif()
 +
-   if(HAVE_${var})
+   if(${result_var})
      # The check compiled.  Load information from the binary.
      file(STRINGS ${bin} strings LIMIT_COUNT 10 REGEX "INFO:size")
 diff --git a/Modules/Compiler/Clang.cmake b/Modules/Compiler/Clang.cmake
-index f834f7a7..9b504cce 100644
+index 6b150ead..ca664b35 100644
 --- a/Modules/Compiler/Clang.cmake
 +++ b/Modules/Compiler/Clang.cmake
 @@ -53,8 +53,13 @@ else()
@@ -211,22 +211,12 @@ index f834f7a7..9b504cce 100644
      string(COMPARE EQUAL "${CMAKE_${lang}_COMPILER_ID}" "AppleClang" __is_apple_clang)
      string(COMPARE EQUAL "${CMAKE_${lang}_COMPILER_ID}" "FujitsuClang" __is_fujitsu_clang)
 diff --git a/Modules/Compiler/IBMClang-CXX.cmake b/Modules/Compiler/IBMClang-CXX.cmake
-index ec97381b..8c780dce 100644
+index 071eec8f..52f2107e 100644
 --- a/Modules/Compiler/IBMClang-CXX.cmake
 +++ b/Modules/Compiler/IBMClang-CXX.cmake
-@@ -28,7 +28,8 @@ set(CMAKE_CXX14_EXTENSION_COMPILE_OPTION "-std=gnu++14")
+@@ -8,7 +8,11 @@ unset(_ibmclang_version_cxx)
  
- set(CMAKE_CXX_STANDARD_LATEST 14)
- 
--if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17.1.0)
-+if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17.1.0 OR
-+    (CMAKE_SYSTEM_NAME STREQUAL "OS390" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 1.1.0))
-   set(CMAKE_CXX17_STANDARD_COMPILE_OPTION  "-std=c++17")
-   set(CMAKE_CXX17_EXTENSION_COMPILE_OPTION "-std=gnu++17")
-   set(CMAKE_CXX20_STANDARD_COMPILE_OPTION  "-std=c++20")
-@@ -38,7 +39,11 @@ if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17.1.0)
-   set(CMAKE_CXX_STANDARD_LATEST 23)
- endif()
+ __compiler_ibmclang(CXX)
  
 -__compiler_check_default_language_standard(CXX 17.1.0 17)
 +if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
@@ -335,10 +325,10 @@ index 00000000..4a59c33f
 +  set(CMAKE_DEPFILE_FLAGS_${lang} "-MF <DEPFILE> -qmakedep=gcc")
 +endmacro()
 diff --git a/Modules/FindThreads.cmake b/Modules/FindThreads.cmake
-index 0fa6ae76..170acd2f 100644
+index f3cf823b..9b94a7dd 100644
 --- a/Modules/FindThreads.cmake
 +++ b/Modules/FindThreads.cmake
-@@ -68,6 +68,10 @@ endif()
+@@ -131,6 +131,10 @@ endif()
  
  # simple pthread test code
  set(PTHREAD_C_CXX_TEST_SOURCE [====[
@@ -349,7 +339,7 @@ index 0fa6ae76..170acd2f 100644
  #include <pthread.h>
  
  static void* test_func(void* data)
-@@ -189,6 +193,11 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+@@ -252,6 +256,11 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
    set(Threads_FOUND TRUE)
  endif()
  
@@ -408,7 +398,7 @@ index 00000000..34499288
 +set(ENV{_CXX_CCMODE} 1)
 +set(ENV{_C89_CCMODE} 1)
 diff --git a/README.rst b/README.rst
-index 8a471db0..955cb17e 100644
+index 3eefaf9b..8d69d261 100644
 --- a/README.rst
 +++ b/README.rst
 @@ -39,6 +39,7 @@ Supported Platforms
@@ -420,10 +410,10 @@ index 8a471db0..955cb17e 100644
  Other UNIX-like operating systems may work too out of the box, if not
  it should not be a major problem to port CMake to this platform.
 diff --git a/Source/CMakeVersion.cmake b/Source/CMakeVersion.cmake
-index f4fca316..b529fd45 100644
+index bb1f12a7..0ecb7c4e 100644
 --- a/Source/CMakeVersion.cmake
 +++ b/Source/CMakeVersion.cmake
-@@ -80,5 +80,9 @@ else()
+@@ -83,5 +83,9 @@ else()
    set(CMake_VERSION_SUFFIX "")
  endif()
  if(CMake_VERSION_IS_DIRTY)
@@ -470,10 +460,10 @@ index 9cbb12ff..d8e1c357 100644
          attr_t fwinAttrs;
          short  fwinPair;
 diff --git a/Source/cmFileCommand.cxx b/Source/cmFileCommand.cxx
-index fccbcc88..918a9ab2 100644
+index 057b3fa0..4bc7a948 100644
 --- a/Source/cmFileCommand.cxx
 +++ b/Source/cmFileCommand.cxx
-@@ -464,7 +464,7 @@ bool HandleStringsCommand(std::vector<std::string> const& args,
+@@ -463,7 +463,7 @@ bool HandleStringsCommand(std::vector<std::string> const& args,
    }
  
  // Open the specified file.
@@ -483,10 +473,10 @@ index fccbcc88..918a9ab2 100644
  #else
    cmsys::ifstream fin(fileName.c_str());
 diff --git a/Source/cmGeneratorTarget.cxx b/Source/cmGeneratorTarget.cxx
-index 39f0b46d..52bdcff5 100644
+index a59186c0..3b3378db 100644
 --- a/Source/cmGeneratorTarget.cxx
 +++ b/Source/cmGeneratorTarget.cxx
-@@ -261,7 +261,8 @@ const char* cmGeneratorTarget::GetOutputTargetType(
+@@ -255,7 +255,8 @@ char const* cmGeneratorTarget::GetOutputTargetType(
          switch (artifact) {
            case cmStateEnums::RuntimeBinaryArtifact:
              // A DLL shared library is treated as a runtime target.
@@ -497,18 +487,18 @@ index 39f0b46d..52bdcff5 100644
              // A DLL import library is treated as an archive target.
              return "ARCHIVE";
 diff --git a/Source/cmInstallCommand.cxx b/Source/cmInstallCommand.cxx
-index 9a797a77..5b95a06c 100644
+index b9080bd7..ac1d90d8 100644
 --- a/Source/cmInstallCommand.cxx
 +++ b/Source/cmInstallCommand.cxx
-@@ -137,6 +137,7 @@ public:
-     const cmInstallCommandArguments* args) const;
-   std::string GetManDestination(const cmInstallCommandArguments* args) const;
-   std::string GetDocDestination(const cmInstallCommandArguments* args) const;
-+  std::string GetImportLibrarySuffix(const cmInstallCommandArguments* args) const;
+@@ -136,6 +136,7 @@ public:
+     cmInstallCommandArguments const* args) const;
+   std::string GetManDestination(cmInstallCommandArguments const* args) const;
+   std::string GetDocDestination(cmInstallCommandArguments const* args) const;
++  std::string GetImportLibrarySuffix(cmInstallCommandArguments const* args) const;
    std::string GetProgramExecutablesDestination(
-     const cmInstallCommandArguments* args) const;
-   std::string GetDestinationForType(const cmInstallCommandArguments* args,
-@@ -699,6 +700,9 @@ bool HandleTargetsMode(std::vector<std::string> const& args,
+     cmInstallCommandArguments const* args) const;
+   std::string GetDestinationForType(cmInstallCommandArguments const* args,
+@@ -698,6 +699,9 @@ bool HandleTargetsMode(std::vector<std::string> const& args,
      return true;
    }
  
@@ -549,33 +539,22 @@ index 9a797a77..5b95a06c 100644
            }
            if (runtimeDependencySet && runtimeGenerator) {
              runtimeDependencySet->AddLibrary(runtimeGenerator.get());
-@@ -2646,6 +2659,11 @@ std::string Helper::GetProgramExecutablesDestination(
+@@ -2513,6 +2526,13 @@ std::string Helper::GetProgramExecutablesDestination(
    return this->GetDestination(args, "CMAKE_INSTALL_LIBEXECDIR", "libexec");
  }
  
-+std::string Helper::GetImportLibrarySuffix(const cmInstallCommandArguments* args) const
++std::string Helper::GetImportLibrarySuffix(cmInstallCommandArguments const* args) const
 +{
 +  return this->Makefile->GetSafeDefinition("CMAKE_IMPORT_LIBRARY_SUFFIX");
 +}
 +
++
++
  std::string Helper::GetDestinationForType(
-   const cmInstallCommandArguments* args, const std::string& type) const
+   cmInstallCommandArguments const* args, std::string const& type) const
  {
-diff --git a/Source/cmLoadCommandCommand.cxx b/Source/cmLoadCommandCommand.cxx
-index 3e994514..1d8fb847 100644
---- a/Source/cmLoadCommandCommand.cxx
-+++ b/Source/cmLoadCommandCommand.cxx
-@@ -1,7 +1,7 @@
- /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
-    file Copyright.txt or https://cmake.org/licensing for details.  */
- 
--#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__)
-+#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__) && !defined(__MVS__)
- // POSIX APIs are needed
- // NOLINTNEXTLINE(bugprone-reserved-identifier)
- #  define _POSIX_C_SOURCE 200809L
 diff --git a/Source/cmStandardLexer.h b/Source/cmStandardLexer.h
-index e39deb0a..0cb0f2eb 100644
+index 71e40d8c..4cb9397c 100644
 --- a/Source/cmStandardLexer.h
 +++ b/Source/cmStandardLexer.h
 @@ -8,7 +8,7 @@
@@ -588,23 +567,22 @@ index e39deb0a..0cb0f2eb 100644
  // NOLINTNEXTLINE(bugprone-reserved-identifier)
  #  define _POSIX_C_SOURCE 200809L
 diff --git a/Source/cmSystemTools.cxx b/Source/cmSystemTools.cxx
-index 907c24d0..6b60beb4 100644
+index ae050da8..598d0ef0 100644
 --- a/Source/cmSystemTools.cxx
 +++ b/Source/cmSystemTools.cxx
 @@ -1,7 +1,7 @@
  /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
-    file Copyright.txt or https://cmake.org/licensing for details.  */
+    file LICENSE.rst or https://cmake.org/licensing for details.  */
  
 -#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__)
 +#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__) && !defined(__MVS__)
  // POSIX APIs are needed
  // NOLINTNEXTLINE(bugprone-reserved-identifier)
  #  define _POSIX_C_SOURCE 200809L
-@@ -3776,6 +3776,14 @@ cm::string_view cmSystemTools::GetSystemName()
-     if (systemName.find("kFreeBSD") != cm::string_view::npos) {
-       systemName = "kFreeBSD";
+@@ -4375,6 +4375,13 @@ cm::string_view cmSystemTools::GetSystemName()
+       systemName = "BSDOS";
      }
-+
+ 
 +    // fix for OS/390, remove the /
 +    static const cmsys::RegularExpression os390Regex("OS.390");
 +    cmsys::RegularExpressionMatch match390;
@@ -616,12 +594,12 @@ index 907c24d0..6b60beb4 100644
    }
    return "";
 diff --git a/Source/cmTimestamp.cxx b/Source/cmTimestamp.cxx
-index e3e3e253..98809597 100644
+index b76dd661..c0d68f61 100644
 --- a/Source/cmTimestamp.cxx
 +++ b/Source/cmTimestamp.cxx
 @@ -1,7 +1,7 @@
  /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
-    file Copyright.txt or https://cmake.org/licensing for details.  */
+    file LICENSE.rst or https://cmake.org/licensing for details.  */
  
 -#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__)
 +#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__) && !defined(__MVS__)
@@ -629,12 +607,12 @@ index e3e3e253..98809597 100644
  // NOLINTNEXTLINE(bugprone-reserved-identifier)
  #  define _POSIX_C_SOURCE 200809L
 diff --git a/Source/cm_fileno.cxx b/Source/cm_fileno.cxx
-index a40c5ca6..242f524e 100644
+index 66881405..b0d17b42 100644
 --- a/Source/cm_fileno.cxx
 +++ b/Source/cm_fileno.cxx
 @@ -1,7 +1,7 @@
  /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
-    file Copyright.txt or https://cmake.org/licensing for details.  */
+    file LICENSE.rst or https://cmake.org/licensing for details.  */
  #if !defined(_POSIX_C_SOURCE) && !defined(_WIN32) && !defined(__sun) &&       \
 -  !defined(__OpenBSD__)
 +  !defined(__OpenBSD__) && !defined(__MVS__)
@@ -642,10 +620,10 @@ index a40c5ca6..242f524e 100644
  // NOLINTNEXTLINE(bugprone-reserved-identifier)
  #  define _POSIX_C_SOURCE 200809L
 diff --git a/Source/kwsys/ProcessUNIX.c b/Source/kwsys/ProcessUNIX.c
-index efe22334..5c548e10 100644
+index a918b8d9..89e39590 100644
 --- a/Source/kwsys/ProcessUNIX.c
 +++ b/Source/kwsys/ProcessUNIX.c
-@@ -2503,7 +2503,7 @@ static pid_t kwsysProcessFork(kwsysProcess* cp,
+@@ -2505,7 +2505,7 @@ static pid_t kwsysProcessFork(kwsysProcess* cp,
    defined(__OpenBSD__) || defined(__GLIBC__) || defined(__GNU__)
  #  define KWSYSPE_PS_COMMAND "ps axo pid,ppid"
  #  define KWSYSPE_PS_FORMAT "%d %d\n"
@@ -655,7 +633,7 @@ index efe22334..5c548e10 100644
  #  define KWSYSPE_PS_FORMAT "%d %d\n"
  #elif defined(__hpux) || defined(__sun__) || defined(__sgi) ||                \
 diff --git a/Source/kwsys/SystemTools.cxx b/Source/kwsys/SystemTools.cxx
-index 6cc103df..ef82bd54 100644
+index 9d4e40b6..ff21fca1 100644
 --- a/Source/kwsys/SystemTools.cxx
 +++ b/Source/kwsys/SystemTools.cxx
 @@ -18,6 +18,10 @@
@@ -669,7 +647,7 @@ index 6cc103df..ef82bd54 100644
  #include "kwsysPrivate.h"
  #include KWSYS_HEADER(RegularExpression.hxx)
  #include KWSYS_HEADER(SystemTools.hxx)
-@@ -85,7 +89,9 @@
+@@ -82,7 +86,9 @@
  #  include <unistd.h>
  #  include <utime.h>
  #  ifndef __VMS
@@ -680,7 +658,7 @@ index 6cc103df..ef82bd54 100644
  #    include <termios.h>
  #  endif
  #  include <csignal> /* sigprocmask */
-@@ -2541,6 +2547,12 @@ SystemTools::CopyStatus SystemTools::CopyFileContentBlockwise(
+@@ -2467,6 +2473,12 @@ SystemTools::CopyStatus SystemTools::CopyFileContentBlockwise(
    fin.close();
    fout.close();
  
@@ -693,7 +671,7 @@ index 6cc103df..ef82bd54 100644
    if (!fout) {
      return CopyStatus{ Status::POSIX_errno(), CopyStatus::DestPath };
    }
-@@ -2586,6 +2598,12 @@ SystemTools::CopyStatus SystemTools::CloneFileContent(
+@@ -2521,6 +2533,12 @@ SystemTools::CopyStatus SystemTools::CloneFileContent(
    close(in);
    close(out);
  
@@ -706,7 +684,7 @@ index 6cc103df..ef82bd54 100644
    return status;
  #elif defined(__APPLE__) &&                                                   \
    defined(KWSYS_SYSTEMTOOLS_HAVE_MACOS_COPYFILE_CLONE)
-@@ -2624,6 +2642,39 @@ SystemTools::CopyStatus SystemTools::CloneFileContent(
+@@ -2573,6 +2591,39 @@ SystemTools::CopyStatus SystemTools::CloneFileContent(
  #endif
  }
  
@@ -746,7 +724,7 @@ index 6cc103df..ef82bd54 100644
  /**
   * Copy a file named by "source" to the file named by "destination".
   */
-@@ -2674,6 +2725,7 @@ SystemTools::CopyStatus SystemTools::CopyFileAlways(
+@@ -2623,6 +2674,7 @@ SystemTools::CopyStatus SystemTools::CopyFileAlways(
      if (!status.IsSuccess()) {
        status = SystemTools::CopyFileContentBlockwise(source, real_destination);
      }
@@ -755,28 +733,30 @@ index 6cc103df..ef82bd54 100644
        return status;
      }
 diff --git a/Source/kwsys/SystemTools.hxx.in b/Source/kwsys/SystemTools.hxx.in
-index 294ffca3..3d5cd3a2 100644
+index a902ab6e..1857148a 100644
 --- a/Source/kwsys/SystemTools.hxx.in
 +++ b/Source/kwsys/SystemTools.hxx.in
-@@ -667,6 +667,13 @@ public:
+@@ -659,6 +659,15 @@ public:
     */
-   static bool SameFile(const std::string& file1, const std::string& file2);
+   static bool SameFile(std::string const& file1, std::string const& file2);
  
++
 +#if defined(__MVS__)
 +  /**
 +   * Copy file attributes.
 +   */
-+  static bool CopyFileAttributes(const std::string& source, const std::string& destination);
++  static bool CopyFileAttributes(std::string const& source, std::string const& destination);
 +#endif
++
 +
    /**
     * Copy a file.
     */
 diff --git a/Utilities/cmcurl/include/curl/system.h b/Utilities/cmcurl/include/curl/system.h
-index e5be2568..1fa376b6 100644
+index 62ed2b0f..5a33364b 100644
 --- a/Utilities/cmcurl/include/curl/system.h
 +++ b/Utilities/cmcurl/include/curl/system.h
-@@ -439,7 +439,6 @@
+@@ -399,7 +399,6 @@
    typedef CURL_TYPEOF_CURL_SOCKLEN_T curl_socklen_t;
  #endif
  
@@ -785,10 +765,10 @@ index e5be2568..1fa376b6 100644
  #ifdef CURL_TYPEOF_CURL_OFF_T
    typedef CURL_TYPEOF_CURL_OFF_T curl_off_t;
 diff --git a/Utilities/cmcurl/lib/curl_setup.h b/Utilities/cmcurl/lib/curl_setup.h
-index 01b9015f..bfd62089 100644
+index 14686b53..5b312edc 100644
 --- a/Utilities/cmcurl/lib/curl_setup.h
 +++ b/Utilities/cmcurl/lib/curl_setup.h
-@@ -568,6 +568,10 @@
+@@ -587,6 +587,10 @@
  #  endif
  #endif
  
@@ -800,10 +780,10 @@ index 01b9015f..bfd62089 100644
  #error "too small curl_off_t"
  #else
 diff --git a/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c b/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c
-index 4cf00801..76c11f61 100644
+index f8e234c5..5b3149a4 100644
 --- a/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c
 +++ b/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c
-@@ -1541,7 +1541,7 @@ set_statvfs_transfer_size(struct filesystem *fs, const struct statvfs *sfs)
+@@ -1542,7 +1542,7 @@ set_statvfs_transfer_size(struct filesystem *fs, const struct statvfs *sfs)
  }
  #endif
  
@@ -812,7 +792,7 @@ index 4cf00801..76c11f61 100644
  static inline __LA_UNUSED void
  set_statfs_transfer_size(struct filesystem *fs, const struct statfs *sfs)
  {
-@@ -1686,7 +1686,7 @@ setup_current_filesystem(struct archive_read_disk *a)
+@@ -1687,7 +1687,7 @@ setup_current_filesystem(struct archive_read_disk *a)
  	return (ARCHIVE_OK);
  }
  
@@ -879,7 +859,7 @@ index 4da1be69..1caff2e6 100644
  #  define HAS_POSIX_ALIGNED_ALLOC
  #  define rhash_aligned_alloc(alignment, size) rhash_px_aalloc((alignment), ALIGN_SIZE_BY(size, sizeof(void*)))
 diff --git a/Utilities/cmlibuv/CMakeLists.txt b/Utilities/cmlibuv/CMakeLists.txt
-index a0b161b5..052b2870 100644
+index 495b5ed0..c7edd0d0 100644
 --- a/Utilities/cmlibuv/CMakeLists.txt
 +++ b/Utilities/cmlibuv/CMakeLists.txt
 @@ -139,6 +139,33 @@ if(CMAKE_SYSTEM_NAME STREQUAL "AIX")
@@ -1014,7 +994,7 @@ index 9f504171..ee0e6ae2 100644
              int (*filter)(const struct dirent *),
              int (*compar)(const struct dirent **,
 diff --git a/Utilities/cmlibuv/src/unix/process.c b/Utilities/cmlibuv/src/unix/process.c
-index ebe185d6..26606667 100644
+index 729a44b4..5217f253 100644
 --- a/Utilities/cmlibuv/src/unix/process.c
 +++ b/Utilities/cmlibuv/src/unix/process.c
 @@ -60,7 +60,7 @@
@@ -1067,7 +1047,7 @@ index 3247b08c..4830c2cc 100644
 -
  #endif /* ZCONF_H */
 diff --git a/Utilities/cmzstd/lib/common/debug.h b/Utilities/cmzstd/lib/common/debug.h
-index 0e9817ea..ea8d240f 100644
+index 0e9817ea..cfcf5612 100644
 --- a/Utilities/cmzstd/lib/common/debug.h
 +++ b/Utilities/cmzstd/lib/common/debug.h
 @@ -70,7 +70,11 @@ extern "C" {
@@ -1076,7 +1056,7 @@ index 0e9817ea..ea8d240f 100644
  #else
 -#  ifndef assert   /* assert may be already defined, due to prior #include <assert.h> */
 +#  if !defined(assert) /* assert may be already defined, due to prior #include <assert.h> */
-+#  ifdef __MVS__ 
++#  ifdef __MVS__
 +#    define __assert 1 /* Indicate to the headers that we have our own assert */
 +#    define NDEBUG 1
 +#  endif
@@ -1097,10 +1077,10 @@ index da20534e..5bd36cd8 100644
  #else
  #  define ZSTD_HAVE_WEAK_SYMBOLS 0
 diff --git a/bootstrap b/bootstrap
-index 53358d54..97e8a207 100755
+index 12ba171c..cf6618c5 100755
 --- a/bootstrap
 +++ b/bootstrap
-@@ -172,6 +172,13 @@ else
+@@ -173,6 +173,13 @@ else
    cmake_system_linux=false
  fi
  
@@ -1114,7 +1094,7 @@ index 53358d54..97e8a207 100755
  # Determine whether this is a PA-RISC machine
  # This only works for Linux or HP-UX, not other PA-RISC OSs (BSD maybe?). Also
  # may falsely detect parisc on HP-UX m68k
-@@ -683,6 +690,14 @@ else
+@@ -691,6 +698,14 @@ else
      "
  fi
  
@@ -1129,7 +1109,7 @@ index 53358d54..97e8a207 100755
  # Display CMake bootstrap usage
  cmake_usage()
  {
-@@ -1022,6 +1037,7 @@ while test $# != 0; do
+@@ -1028,6 +1043,7 @@ while test $# != 0; do
    CFLAGS=*) CFLAGS=`cmake_arg "$1"` ;;
    CXXFLAGS=*) CXXFLAGS=`cmake_arg "$1"` ;;
    LDFLAGS=*) LDFLAGS=`cmake_arg "$1"` ;;
@@ -1137,7 +1117,7 @@ index 53358d54..97e8a207 100755
    --) shift; break ;;
    *) die "Unknown option: $1" ;;
    esac
-@@ -1179,6 +1195,7 @@ case "${cmake_system}" in
+@@ -1185,6 +1201,7 @@ case "${cmake_system}" in
    *Darwin*) cmake_toolchains='Clang GNU' ;;
    *Linux*) cmake_toolchains='GNU Clang XL PGI PathScale' ;;
    *MINGW*) cmake_toolchains='GNU' ;;
@@ -1145,7 +1125,7 @@ index 53358d54..97e8a207 100755
  esac
  
  # Toolchain compiler name table.
-@@ -1763,7 +1780,7 @@ if test "x${bootstrap_system_jsoncpp}" = "x"; then
+@@ -1759,7 +1776,7 @@ if test "x${bootstrap_system_jsoncpp}" = "x"; then
    done
  fi
  
@@ -1154,7 +1134,7 @@ index 53358d54..97e8a207 100755
  
  uv_c_flags=""
  if ${cmake_system_mingw}; then
-@@ -1799,6 +1816,13 @@ else
+@@ -1794,6 +1811,13 @@ else
        uv_c_flags="${uv_c_flags} -D_XOPEN_SOURCE=700"
        libs="${libs} -lsocket"
        ;;
@@ -1168,7 +1148,7 @@ index 53358d54..97e8a207 100755
    esac
  fi
  if test "x${bootstrap_system_libuv}" = "x"; then
-@@ -2109,6 +2133,7 @@ export MAKE
+@@ -2104,6 +2128,7 @@ export MAKE
  export CFLAGS
  export CXXFLAGS
  export LDFLAGS
