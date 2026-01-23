@@ -553,6 +553,41 @@ index b9080bd7..ac1d90d8 100644
  std::string Helper::GetDestinationForType(
    cmInstallCommandArguments const* args, std::string const& type) const
  {
+diff --git a/Source/cmLocalGenerator.cxx b/Source/cmLocalGenerator.cxx
+index 83dc6b1d..fe27b7b2 100644
+--- a/Source/cmLocalGenerator.cxx
++++ b/Source/cmLocalGenerator.cxx
+@@ -4110,24 +4110,19 @@ std::string& cmLocalGenerator::CreateSafeUniqueObjectFileName(
+     if (this->Makefile->IsOn("CMAKE_MANGLE_OBJECT_FILE_NAMES")) {
+       bool done;
+       int cc = 0;
+-      char rpstr[100];
+-      snprintf(rpstr, sizeof(rpstr), "_p_");
+-      cmSystemTools::ReplaceString(ssin, "+", rpstr);
+-      std::string sssin = sin;
++      cmSystemTools::ReplaceString(ssin, "+", "_p_");
+       do {
+         done = true;
+         for (it = this->UniqueObjectNamesMap.begin();
+              it != this->UniqueObjectNamesMap.end(); ++it) {
+-          if (it->second == ssin) {
++          if (cmSystemTools::GetFilenameName(it->second) == cmSystemTools::GetFilenameName(ssin)) {
+             done = false;
++            std::ostringstream repStream;
++            repStream << "_" << cc++;
++            ssin.insert(ssin.rfind("."), repStream.str());
++            break;
+           }
+         }
+-        if (done) {
+-          break;
+-        }
+-        sssin = ssin;
+-        cmSystemTools::ReplaceString(ssin, "_p_", rpstr);
+-        snprintf(rpstr, sizeof(rpstr), "_p%d_", cc++);
+       } while (!done);
+     }
+ 
 diff --git a/Source/cmStandardLexer.h b/Source/cmStandardLexer.h
 index 71e40d8c..4cb9397c 100644
 --- a/Source/cmStandardLexer.h
