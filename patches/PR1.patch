@@ -353,10 +353,10 @@ index f3cf823b..9b94a7dd 100644
      # Use libcma if it exists and can be used.  It provides more
 diff --git a/Modules/Platform/OS390.cmake b/Modules/Platform/OS390.cmake
 new file mode 100644
-index 00000000..34499288
+index 00000000..5b77358e
 --- /dev/null
 +++ b/Modules/Platform/OS390.cmake
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,55 @@
 +set(OS390 1)
 +set(ZOS 1)
 +
@@ -383,6 +383,10 @@ index 00000000..34499288
 +
 +set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 +
++# z/OS import file settings (side-deck files for executables with exports)
++set(CMAKE_ZOS_IMPORT_FILE_PREFIX "")
++set(CMAKE_ZOS_IMPORT_FILE_SUFFIX ".x")
++
 +# z/OS archiver (ar) cannot archive two file names with the same name
 +# as part of the same archive command. We must make sure the
 +# object file names are distinct.
@@ -397,6 +401,17 @@ index 00000000..34499288
 +set(ENV{_CC_CCMODE} 1)
 +set(ENV{_CXX_CCMODE} 1)
 +set(ENV{_C89_CCMODE} 1)
++
++# ENABLE_EXPORTS support for executables (Clang only)
++# Link flag: -shared (creates side-deck .x files)
++# Compile flag: -fvisibility=default is automatically added by CMake
++if(CMAKE_C_COMPILER_ID MATCHES "Clang")
++  set(CMAKE_EXE_EXPORTS_C_FLAG "-shared")
++endif()
++
++if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
++  set(CMAKE_EXE_EXPORTS_CXX_FLAG "-shared")
++endif()
 diff --git a/README.rst b/README.rst
 index 3eefaf9b..8d69d261 100644
 --- a/README.rst
@@ -473,7 +488,7 @@ index 057b3fa0..4bc7a948 100644
  #else
    cmsys::ifstream fin(fileName.c_str());
 diff --git a/Source/cmGeneratorTarget.cxx b/Source/cmGeneratorTarget.cxx
-index a59186c0..3b3378db 100644
+index a59186c0..2c544e4e 100644
 --- a/Source/cmGeneratorTarget.cxx
 +++ b/Source/cmGeneratorTarget.cxx
 @@ -255,7 +255,8 @@ char const* cmGeneratorTarget::GetOutputTargetType(
@@ -486,6 +501,41 @@ index a59186c0..3b3378db 100644
            case cmStateEnums::ImportLibraryArtifact:
              // A DLL import library is treated as an archive target.
              return "ARCHIVE";
+@@ -2018,6 +2019,12 @@ bool cmGeneratorTarget::IsAIX() const
+   return this->Target->IsAIX();
+ }
+ 
++
++bool cmGeneratorTarget::IsZOS() const
++{
++  return this->Target->IsZOS();
++}
++
+ bool cmGeneratorTarget::IsApple() const
+ {
+   return this->Target->IsApple();
+@@ -5440,6 +5447,7 @@ bool cmGeneratorTarget::HasImportLibrary(std::string const& config) const
+           // import libraries.
+           this->GetManagedType(config) != ManagedType::Managed) ||
+     (this->IsAIX() && this->IsExecutableWithExports()) ||
++    (this->IsZOS() && this->IsExecutableWithExports()) ||
+     (this->Makefile->PlatformSupportsAppleTextStubs() &&
+      this->IsSharedLibraryWithExports() && generate_Stubs);
+ }
+diff --git a/Source/cmGeneratorTarget.h b/Source/cmGeneratorTarget.h
+index 94c16b5c..8366d2b8 100644
+--- a/Source/cmGeneratorTarget.h
++++ b/Source/cmGeneratorTarget.h
+@@ -438,6 +438,9 @@ public:
+   /** Return whether or not we are targeting AIX. */
+   bool IsAIX() const;
+   /** Return whether or not we are targeting Apple. */
++  /** Return whether or not we are targeting z/OS. */
++  bool IsZOS() const;
++
+   bool IsApple() const;
+ 
+   /** Return whether or not the target is for a DLL platform.  */
 diff --git a/Source/cmInstallCommand.cxx b/Source/cmInstallCommand.cxx
 index b9080bd7..ac1d90d8 100644
 --- a/Source/cmInstallCommand.cxx
@@ -554,10 +604,37 @@ index b9080bd7..ac1d90d8 100644
    cmInstallCommandArguments const* args, std::string const& type) const
  {
 diff --git a/Source/cmLocalGenerator.cxx b/Source/cmLocalGenerator.cxx
-index 83dc6b1d..fe27b7b2 100644
+index 83dc6b1d..f4fd877a 100644
 --- a/Source/cmLocalGenerator.cxx
 +++ b/Source/cmLocalGenerator.cxx
-@@ -4110,24 +4110,19 @@ std::string& cmLocalGenerator::CreateSafeUniqueObjectFileName(
+@@ -1951,8 +1951,8 @@ std::string cmLocalGenerator::GetExeExportFlags(
+       this->StateSnapshot.GetState()->GetGlobalPropertyAsBool(
+         "TARGET_SUPPORTS_SHARED_LIBS")) {
+     // Only add the flags if ENABLE_EXPORTS is on,
+-    // except on AIX where we compute symbol exports.
+-    if (!tgt.IsAIX() && tgt.GetPropertyAsBool("ENABLE_EXPORTS")) {
++    // except on AIX/z/OS where we compute symbol exports.
++    if (!(tgt.IsAIX() || tgt.IsZOS()) && tgt.GetPropertyAsBool("ENABLE_EXPORTS")) {
+       linkFlags = this->Makefile->GetSafeDefinition(
+         cmStrCat("CMAKE_SHARED_LIBRARY_LINK_", linkLanguage, "_FLAGS"));
+     }
+@@ -2434,6 +2434,15 @@ static void AddVisibilityCompileOption(std::string& flags,
+   std::string flagDefine = lang + "_VISIBILITY_PRESET";
+ 
+   cmValue prop = target->GetProperty(flagDefine);
++
++  // z/OS: Default visibility is hidden. For executables with ENABLE_EXPORTS,
++  // use "default" visibility to export all symbols.
++  std::string zosDefaultVisibility;
++  if (!prop && target->IsZOS() && target->IsExecutableWithExports()) {
++    zosDefaultVisibility = "default";
++    prop = cmValue(zosDefaultVisibility);
++  }
++
+   if (!prop) {
+     return;
+   }
+@@ -4110,24 +4119,19 @@ std::string& cmLocalGenerator::CreateSafeUniqueObjectFileName(
      if (this->Makefile->IsOn("CMAKE_MANGLE_OBJECT_FILE_NAMES")) {
        bool done;
        int cc = 0;
@@ -628,6 +705,84 @@ index ae050da8..598d0ef0 100644
      return systemName;
    }
    return "";
+diff --git a/Source/cmTarget.cxx b/Source/cmTarget.cxx
+index 6c0cd8b6..fca6620c 100644
+--- a/Source/cmTarget.cxx
++++ b/Source/cmTarget.cxx
+@@ -604,6 +604,7 @@ public:
+   bool HaveInstallRule;
+   bool IsDLLPlatform;
+   bool IsAIX;
++  bool IsZOS;
+   bool IsApple;
+   bool IsAndroid;
+   bool BuildInterfaceIncludesAppended;
+@@ -884,6 +885,7 @@ cmTarget::cmTarget(std::string const& name, cmStateEnums::TargetType type,
+   this->impl->HaveInstallRule = false;
+   this->impl->IsDLLPlatform = false;
+   this->impl->IsAIX = false;
++  this->impl->IsZOS = false;
+   this->impl->IsApple = false;
+   this->impl->IsAndroid = false;
+   this->impl->IsSymbolic = false;
+@@ -901,6 +903,7 @@ cmTarget::cmTarget(std::string const& name, cmStateEnums::TargetType type,
+     std::string const& systemName =
+       this->impl->Makefile->GetSafeDefinition("CMAKE_SYSTEM_NAME");
+     this->impl->IsAIX = (systemName == "AIX" || systemName == "OS400");
++    this->impl->IsZOS = (systemName == "OS390");
+   }
+ 
+   // Check whether we are targeting Apple.
+@@ -2769,6 +2772,12 @@ bool cmTarget::IsAIX() const
+ {
+   return this->impl->IsAIX;
+ }
++
++bool cmTarget::IsZOS() const
++{
++  return this->impl->IsZOS;
++}
++
+ bool cmTarget::IsApple() const
+ {
+   return this->impl->IsApple;
+@@ -2940,8 +2949,9 @@ char const* cmTarget::GetSuffixVariableInternal(
+                     ? "CMAKE_SHARED_LIBRARY_SUFFIX"
+                     : "CMAKE_EXECUTABLE_SUFFIX");
+         case cmStateEnums::ImportLibraryArtifact:
+-          return (this->impl->IsAIX ? "CMAKE_AIX_IMPORT_FILE_SUFFIX"
+-                                    : "CMAKE_IMPORT_LIBRARY_SUFFIX");
++          return (this->impl->IsAIX   ? "CMAKE_AIX_IMPORT_FILE_SUFFIX"
++                  : this->impl->IsZOS ? "CMAKE_ZOS_IMPORT_FILE_SUFFIX"
++                                      : "CMAKE_IMPORT_LIBRARY_SUFFIX");
+       }
+       break;
+     default:
+@@ -2982,8 +2992,9 @@ char const* cmTarget::GetPrefixVariableInternal(
+                     ? "CMAKE_SHARED_LIBRARY_PREFIX"
+                     : "");
+         case cmStateEnums::ImportLibraryArtifact:
+-          return (this->impl->IsAIX ? "CMAKE_AIX_IMPORT_FILE_PREFIX"
+-                                    : "CMAKE_IMPORT_LIBRARY_PREFIX");
++          return (this->impl->IsAIX   ? "CMAKE_AIX_IMPORT_FILE_PREFIX"
++                  : this->impl->IsZOS ? "CMAKE_ZOS_IMPORT_FILE_PREFIX"
++                                      : "CMAKE_IMPORT_LIBRARY_PREFIX");
+       }
+       break;
+     default:
+diff --git a/Source/cmTarget.h b/Source/cmTarget.h
+index 1eed1006..1fc00663 100644
+--- a/Source/cmTarget.h
++++ b/Source/cmTarget.h
+@@ -225,6 +225,8 @@ public:
+ 
+   //! Return whether or not we are targeting AIX.
+   bool IsAIX() const;
++  //! Return whether or not we are targeting z/OS.
++  bool IsZOS() const;
+   //! Return whether or not we are targeting Apple.
+   bool IsApple() const;
+ 
 diff --git a/Source/cmTimestamp.cxx b/Source/cmTimestamp.cxx
 index b76dd661..c0d68f61 100644
 --- a/Source/cmTimestamp.cxx
