@@ -1,0 +1,12 @@
+diff --git a/Utilities/cmcurl/include/curl/system.h b/Utilities/cmcurl/include/curl/system.h
+index c2dbab56..6ba15bdd 100644
+--- a/Utilities/cmcurl/include/curl/system.h
++++ b/Utilities/cmcurl/include/curl/system.h
+@@ -390,7 +390,6 @@
+   typedef CURL_TYPEOF_CURL_SOCKLEN_T curl_socklen_t;
+ #endif
+ 
+-/* Data type definition of curl_off_t. */
+ 
+ #ifdef CURL_TYPEOF_CURL_OFF_T
+   typedef CURL_TYPEOF_CURL_OFF_T curl_off_t;

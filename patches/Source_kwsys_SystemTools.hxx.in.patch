@@ -1,0 +1,20 @@
+diff --git a/Source/kwsys/SystemTools.hxx.in b/Source/kwsys/SystemTools.hxx.in
+index 12b37406..7eb5a1f6 100644
+--- a/Source/kwsys/SystemTools.hxx.in
++++ b/Source/kwsys/SystemTools.hxx.in
+@@ -656,6 +656,15 @@ public:
+    */
+   static bool SameFile(std::string const& file1, std::string const& file2);
+ 
++
++#if defined(__MVS__)
++  /**
++   * Copy file attributes.
++   */
++  static bool CopyFileAttributes(std::string const& source, std::string const& destination);
++#endif
++
++
+   /**
+    * Copy a file.
+    */

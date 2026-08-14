@@ -1,0 +1,33 @@
+diff --git a/Modules/CheckTypeSize.cmake b/Modules/CheckTypeSize.cmake
+index c0c9dbb3..be6c2ae8 100644
+--- a/Modules/CheckTypeSize.cmake
++++ b/Modules/CheckTypeSize.cmake
+@@ -341,6 +341,16 @@ function(__check_type_size_impl type var result_var map builtin language)
+   set(bin ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CheckTypeSize/${var}.bin)
+   file(READ ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/CheckTypeSize.c.in src_content)
+   string(CONFIGURE "${src_content}" src_content @ONLY)
++  # Add Flag for z/OS compilers for ascii encoding of string literals.
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    # Only need to modify CMAKE_C_FLAGS as CheckTypeSize.c.in is in C
++    set(CMAKE_C_FLAGS_SAVE ${CMAKE_C_FLAGS})
++    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
++      string(APPEND CMAKE_C_FLAGS " -fzos-le-char-mode=ascii")
++    elseif(CMAKE_C_COMPILER_ID MATCHES "zOS")
++      string(APPEND CMAKE_C_FLAGS " -qASCII")
++    endif()
++  endif()
+   try_compile(${result_var} SOURCE_FROM_VAR "${src}" src_content
+     COMPILE_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
+     ${_CTS_ADD_LINK_OPTIONS}
+@@ -352,6 +362,11 @@ function(__check_type_size_impl type var result_var map builtin language)
+     COPY_FILE ${bin}
+     )
+ 
++  # Restore flags for z/OS compilers.
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS_SAVE})
++  endif()
++
+   if(${result_var})
+     # The check compiled.  Load information from the binary.
+     file(STRINGS ${bin} strings LIMIT_COUNT 10 REGEX "INFO:size")

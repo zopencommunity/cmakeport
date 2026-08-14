@@ -1,0 +1,65 @@
+diff --git a/Utilities/cmlibuv/src/unix/internal.h b/Utilities/cmlibuv/src/unix/internal.h
+index 55af6d4d..ac1cf2eb 100644
+--- a/Utilities/cmlibuv/src/unix/internal.h
++++ b/Utilities/cmlibuv/src/unix/internal.h
+@@ -111,6 +111,14 @@ int uv__pthread_atfork(void (*prepare)(void), void (*parent)(void),
+ int uv__pthread_sigmask(int how, const sigset_t* set, sigset_t* oset);
+ #endif
+ 
++#ifndef S_ISDIR
++# if defined(_S_IFMT) && defined(_S_IFDIR)
++#  define S_ISDIR(a)   (((a) & _S_IFMT) == _S_IFDIR)
++# else
++#  define S_ISDIR(a)   (((a) & S_IFMT) == S_IFDIR)
++# endif
++#endif
++
+ union uv__sockaddr {
+   struct sockaddr_in6 in6;
+   struct sockaddr_in in;
+@@ -317,7 +325,7 @@ void uv__udp_io(uv_loop_t* loop, uv__io_t* w, unsigned int events);
+ #define uv__fs_event(loop, w, events) UNREACHABLE()
+ #endif
+ 
+-#ifndef __linux__
++#if !defined(__linux__) && !defined(__MVS__)
+ #define uv__inotify_read(loop, w, events) UNREACHABLE()
+ #endif
+ 
+@@ -371,11 +379,7 @@ int uv__slurp(const char* filename, char* buf, size_t len);
+ /* tcp */
+ int uv__tcp_listen(uv_tcp_t* tcp, int backlog, uv_connection_cb cb);
+ int uv__tcp_nodelay(int fd, int on);
+-int uv__tcp_keepalive(int fd,
+-                      int on,
+-                      unsigned int idle,
+-                      unsigned int intvl,
+-                      unsigned int cnt);
++int uv__tcp_keepalive(int fd, int on, unsigned int delay);
+ 
+ /* tty */
+ void uv__tty_close(uv_tty_t* handle);
+@@ -391,6 +395,7 @@ int uv__signal_loop_fork(uv_loop_t* loop);
+ 
+ /* platform specific */
+ uint64_t uv__hrtime(uv_clocktype_t type);
++uint64_t uv__get_rlimit_max_memory(void);
+ int uv__kqueue_init(uv_loop_t* loop);
+ int uv__platform_loop_init(uv_loop_t* loop);
+ void uv__platform_loop_delete(uv_loop_t* loop);
+@@ -481,12 +486,12 @@ UV_UNUSED(static void uv__update_time(uv_loop_t* loop)) {
+   loop->time = uv__hrtime(UV_CLOCK_FAST) / 1000000;
+ }
+ 
+-UV_UNUSED(static char* uv__basename_r(const char* path)) {
+-  char* s;
++UV_UNUSED(static const char* uv__basename_r(const char* path)) {
++  const char* s;
+ 
+   s = strrchr(path, '/');
+   if (s == NULL)
+-    return (char*) path;
++    return path;
+ 
+   return s + 1;
+ }

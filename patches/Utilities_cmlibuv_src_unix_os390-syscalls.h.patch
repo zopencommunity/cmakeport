@@ -1,0 +1,59 @@
+diff --git a/Utilities/cmlibuv/src/unix/os390-syscalls.h b/Utilities/cmlibuv/src/unix/os390-syscalls.h
+index d5f3bcf8..43440d1f 100644
+--- a/Utilities/cmlibuv/src/unix/os390-syscalls.h
++++ b/Utilities/cmlibuv/src/unix/os390-syscalls.h
+@@ -27,18 +27,12 @@
+ #include "internal.h"
+ #include <dirent.h>
+ #include <poll.h>
++#include <sys/epoll.h> // For EPOLL_CTL_ADD, MOD, DEL only.
++#include <sys/inotify.h>
+ #include <pthread.h>
+ #include "zos-base.h"
+ 
+-#define EPOLL_CTL_ADD             1
+-#define EPOLL_CTL_DEL             2
+-#define EPOLL_CTL_MOD             3
+-#define MAX_EPOLL_INSTANCES       256
+-#define MAX_ITEMS_PER_EPOLL       1024
+-
+-#define UV__O_CLOEXEC             0x80000
+-
+-struct epoll_event {
++struct uv__os390_epoll_event {
+   int events;
+   int fd;
+   int is_msg;
+@@ -51,10 +45,14 @@ typedef struct {
+   int msg_queue;
+ } uv__os390_epoll;
+ 
+-/* epoll api */
+-uv__os390_epoll* epoll_create1(int flags);
+-int epoll_ctl(uv__os390_epoll* ep, int op, int fd, struct epoll_event *event);
+-int epoll_wait(uv__os390_epoll* ep, struct epoll_event *events, int maxevents, int timeout);
++/* epoll api (prefixed with uv__os390_ to avoid conflict with sys/epoll.h) */
++uv__os390_epoll* uv__os390_epoll_create1(int flags);
++int uv__os390_epoll_ctl(uv__os390_epoll* ep, int op, int fd,
++                        struct uv__os390_epoll_event *event);
++int uv__os390_epoll_wait(uv__os390_epoll* ep,
++                         struct uv__os390_epoll_event *events,
++                         int maxevents, int timeout);
++void epoll_queue_close(uv__os390_epoll* lst);
+ int epoll_file_close(int fd);
+ 
+ /* utility functions */
+@@ -63,13 +61,7 @@ int scandir(const char* maindir, struct dirent*** namelist,
+             int (*compar)(const struct dirent **,
+             const struct dirent **));
+ char *mkdtemp(char* path);
+-ssize_t os390_readlink(const char* path, char* buf, size_t len);
+ size_t strnlen(const char* str, size_t maxlen);
+-int sem_init(UV_PLATFORM_SEM_T* semid, int pshared, unsigned int value);
+-int sem_destroy(UV_PLATFORM_SEM_T* semid);
+-int sem_post(UV_PLATFORM_SEM_T* semid);
+-int sem_trywait(UV_PLATFORM_SEM_T* semid);
+-int sem_wait(UV_PLATFORM_SEM_T* semid);
+ void uv__os390_cleanup(void);
+ 
+ #endif /* UV_OS390_SYSCALL_H_ */

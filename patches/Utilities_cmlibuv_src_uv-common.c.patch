@@ -1,0 +1,14 @@
+diff --git a/Utilities/cmlibuv/src/uv-common.c b/Utilities/cmlibuv/src/uv-common.c
+index 050bc9dd..d5da86f3 100644
+--- a/Utilities/cmlibuv/src/uv-common.c
++++ b/Utilities/cmlibuv/src/uv-common.c
+@@ -37,6 +37,9 @@
+ # include <sys/un.h> /* AF_UNIX, sockaddr_un */
+ #endif
+ 
++#if defined(__MVS__)
++# include "os390-syscalls.h"
++#endif
+ 
+ typedef struct {
+   uv_malloc_func local_malloc;

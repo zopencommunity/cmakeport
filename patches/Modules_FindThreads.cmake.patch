@@ -1,0 +1,27 @@
+diff --git a/Modules/FindThreads.cmake b/Modules/FindThreads.cmake
+index f3cf823b..9b94a7dd 100644
+--- a/Modules/FindThreads.cmake
++++ b/Modules/FindThreads.cmake
+@@ -131,6 +131,10 @@ endif()
+ 
+ # simple pthread test code
+ set(PTHREAD_C_CXX_TEST_SOURCE [====[
++#ifdef __MVS__
++#define _UNIX03_THREADS
++#include <stddef.h>
++#endif
+ #include <pthread.h>
+ 
+ static void* test_func(void* data)
+@@ -252,6 +256,11 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+   set(Threads_FOUND TRUE)
+ endif()
+ 
++if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++  set(CMAKE_USE_ZOS_THREADS_INIT 1)
++  set(Threads_FOUND TRUE)
++endif()
++
+ if(CMAKE_USE_PTHREADS_INIT)
+   if(CMAKE_SYSTEM_NAME MATCHES "HP-UX")
+     # Use libcma if it exists and can be used.  It provides more

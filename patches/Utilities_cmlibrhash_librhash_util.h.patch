@@ -1,0 +1,31 @@
+diff --git a/Utilities/cmlibrhash/librhash/util.h b/Utilities/cmlibrhash/librhash/util.h
+index 4da1be69..1caff2e6 100644
+--- a/Utilities/cmlibrhash/librhash/util.h
++++ b/Utilities/cmlibrhash/librhash/util.h
+@@ -13,7 +13,7 @@ extern "C" {
+ 
+ #if (defined(__GNUC__) && __GNUC__ >= 4 && (__GNUC__ > 4 || __GNUC_MINOR__ >= 1) \
+ 	&& defined(__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4)) \
+-	|| (defined(__INTEL_COMPILER) && !defined(_WIN32))
++	|| (defined(__INTEL_COMPILER) && !defined(_WIN32)) && !defined(__MVS__)
+ /* atomic operations are defined by ICC and GCC >= 4.1, but by the later one supposedly not for ARM */
+ /* note: ICC on ia64 platform possibly require ia64intrin.h, need testing */
+ # define atomic_compare_and_swap(ptr, oldval, newval) __sync_val_compare_and_swap(ptr, oldval, newval)
+@@ -46,7 +46,7 @@ extern "C" {
+ #elif !defined(NO_STDC_ALIGNED_ALLOC) && (__STDC_VERSION__ >= 201112L || defined(_ISOC11_SOURCE)) \
+ 	&& !(defined(__GLIBC__) && (__GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 16))) \
+ 	&& !(defined(__ibmxl__) && defined(__clang__) && defined(__linux__)) \
+-	&& !defined(__APPLE__) && !defined(__HAIKU__) && !defined(__sun) \
++	&& !defined(__APPLE__) && !defined(__HAIKU__) && !defined(__sun) && !defined(__MVS__) \
+ 	&& (!defined(__ANDROID_API__) || __ANDROID_API__ >= 28)
+ 
+ # define HAS_STDC_ALIGNED_ALLOC
+@@ -57,7 +57,7 @@ extern "C" {
+ 
+ # include "ustd.h" /* for _POSIX_VERSION macro */
+ 
+-# if !defined(NO_POSIX_ALIGNED_ALLOC) && (_POSIX_VERSION >= 200112L || _XOPEN_SOURCE >= 600)
++# if !defined(NO_POSIX_ALIGNED_ALLOC) && (_POSIX_VERSION >= 200112L || _XOPEN_SOURCE >= 600) && !defined(__MVS__)
+ 
+ #  define HAS_POSIX_ALIGNED_ALLOC
+ #  define rhash_aligned_alloc(alignment, size) rhash_px_aalloc((alignment), ALIGN_SIZE_BY(size, sizeof(void*)))

@@ -1,0 +1,13 @@
+diff --git a/Source/cm_fileno.cxx b/Source/cm_fileno.cxx
+index 66881405..b0d17b42 100644
+--- a/Source/cm_fileno.cxx
++++ b/Source/cm_fileno.cxx
+@@ -1,7 +1,7 @@
+ /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
+    file LICENSE.rst or https://cmake.org/licensing for details.  */
+ #if !defined(_POSIX_C_SOURCE) && !defined(_WIN32) && !defined(__sun) &&       \
+-  !defined(__OpenBSD__)
++  !defined(__OpenBSD__) && !defined(__MVS__)
+ /* POSIX APIs are needed */
+ // NOLINTNEXTLINE(bugprone-reserved-identifier)
+ #  define _POSIX_C_SOURCE 200809L

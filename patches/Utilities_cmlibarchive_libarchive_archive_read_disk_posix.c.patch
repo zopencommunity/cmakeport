@@ -1,0 +1,22 @@
+diff --git a/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c b/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c
+index c88e45a4..9e4eb88d 100644
+--- a/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c
++++ b/Utilities/cmlibarchive/libarchive/archive_read_disk_posix.c
+@@ -1541,7 +1541,7 @@ set_statvfs_transfer_size(struct filesystem *fs, const struct statvfs *sfs)
+ }
+ #endif
+ 
+-#if defined(HAVE_STRUCT_STATFS)
++#if defined(HAVE_STRUCT_STATFS) && !defined(__MVS__)
+ static inline __LA_UNUSED void
+ set_statfs_transfer_size(struct filesystem *fs, const struct statfs *sfs)
+ {
+@@ -1654,7 +1654,7 @@ setup_current_filesystem(struct archive_read_disk *a)
+ 	return (ARCHIVE_OK);
+ }
+ 
+-#elif (defined(HAVE_STATVFS) || defined(HAVE_FSTATVFS)) && defined(ST_LOCAL)
++#elif (defined(HAVE_STATVFS) || defined(HAVE_FSTATVFS)) && defined(ST_LOCAL) && !defined(__MVS_)
+ 
+ /*
+  * Gather current filesystem properties on NetBSD

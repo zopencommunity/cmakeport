@@ -1,0 +1,62 @@
+diff --git a/Source/cmLocalGenerator.cxx b/Source/cmLocalGenerator.cxx
+index 844046f6..5c27f526 100644
+--- a/Source/cmLocalGenerator.cxx
++++ b/Source/cmLocalGenerator.cxx
+@@ -1950,8 +1950,8 @@ std::string cmLocalGenerator::GetExeExportFlags(
+       this->StateSnapshot.GetState()->GetGlobalPropertyAsBool(
+         "TARGET_SUPPORTS_SHARED_LIBS")) {
+     // Only add the flags if ENABLE_EXPORTS is on,
+-    // except on AIX where we compute symbol exports.
+-    if (!tgt.IsAIX() && tgt.GetPropertyAsBool("ENABLE_EXPORTS")) {
++    // except on AIX/z/OS where we compute symbol exports.
++    if (!(tgt.IsAIX() || tgt.IsZOS()) && tgt.GetPropertyAsBool("ENABLE_EXPORTS")) {
+       linkFlags = this->Makefile->GetSafeDefinition(
+         cmStrCat("CMAKE_SHARED_LIBRARY_LINK_", linkLanguage, "_FLAGS"));
+     }
+@@ -2438,6 +2438,15 @@ static void AddVisibilityCompileOption(std::string& flags,
+   std::string flagDefine = lang + "_VISIBILITY_PRESET";
+ 
+   cmValue prop = target->GetProperty(flagDefine);
++
++  // z/OS: Default visibility is hidden. For executables with ENABLE_EXPORTS,
++  // use "default" visibility to export all symbols.
++  std::string zosDefaultVisibility;
++  if (!prop && target->IsZOS() && target->IsExecutableWithExports()) {
++    zosDefaultVisibility = "default";
++    prop = cmValue(zosDefaultVisibility);
++  }
++
+   if (!prop) {
+     return;
+   }
+@@ -4317,24 +4326,19 @@ std::string& cmLocalGenerator::CreateSafeUniqueObjectFileName(
+     if (this->Makefile->IsOn("CMAKE_MANGLE_OBJECT_FILE_NAMES")) {
+       bool done;
+       int cc = 0;
+-      char rpstr[100];
+-      snprintf(rpstr, sizeof(rpstr), "_p_");
+-      cmSystemTools::ReplaceString(ssin, "+", rpstr);
+-      std::string sssin = sin;
++      cmSystemTools::ReplaceString(ssin, "+", "_p_");
+       do {
+         done = true;
+         for (it = this->UniqueObjectNamesMap.begin();
+              it != this->UniqueObjectNamesMap.end(); ++it) {
+-          if (it->second == ssin) {
++          if (cmSystemTools::GetFilenameName(it->second) == cmSystemTools::GetFilenameName(ssin)) {
+             done = false;
++            std::ostringstream repStream;
++            repStream << "_" << cc++;
++            ssin.insert(ssin.rfind("."), repStream.str());
++            break;
+           }
+         }
+-        if (done) {
+-          break;
+-        }
+-        sssin = ssin;
+-        cmSystemTools::ReplaceString(ssin, "_p_", rpstr);
+-        snprintf(rpstr, sizeof(rpstr), "_p%d_", cc++);
+       } while (!done);
+     }
+ 

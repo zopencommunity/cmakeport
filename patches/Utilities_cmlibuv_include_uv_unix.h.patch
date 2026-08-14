@@ -1,0 +1,21 @@
+diff --git a/Utilities/cmlibuv/include/uv/unix.h b/Utilities/cmlibuv/include/uv/unix.h
+index 93daee71..3a4836b5 100644
+--- a/Utilities/cmlibuv/include/uv/unix.h
++++ b/Utilities/cmlibuv/include/uv/unix.h
+@@ -46,9 +46,13 @@
+ #include "threadpool.h"
+ 
+ #ifdef CMAKE_BOOTSTRAP
+-# include "posix.h"
+-# if defined(__APPLE__)
+-#  include <TargetConditionals.h>
++# if defined(__MVS__)
++#  include "os390.h"
++# else
++#  include "posix.h"
++#  if defined(__APPLE__)
++#   include <TargetConditionals.h>
++#  endif
+ # endif
+ #elif defined(__linux__)
+ # include "linux.h"

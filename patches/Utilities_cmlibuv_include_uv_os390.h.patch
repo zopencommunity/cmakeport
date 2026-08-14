@@ -1,0 +1,26 @@
+diff --git a/Utilities/cmlibuv/include/uv/os390.h b/Utilities/cmlibuv/include/uv/os390.h
+index 0267d74c..718fb856 100644
+--- a/Utilities/cmlibuv/include/uv/os390.h
++++ b/Utilities/cmlibuv/include/uv/os390.h
+@@ -22,12 +22,19 @@
+ #ifndef UV_MVS_H
+ #define UV_MVS_H
+ 
+-#define UV_PLATFORM_SEM_T long
++#include "zos-semaphore.h"
+ 
+ #define UV_PLATFORM_LOOP_FIELDS                                               \
+   void* ep;                                                                   \
++  uv__io_t inotify_read_watcher;                                              \
++  void* inotify_watchers;                                                     \
++  int inotify_fd;                                                             \
+ 
+ #define UV_PLATFORM_FS_EVENT_FIELDS                                           \
+-  char rfis_rftok[8];                                                         \
++  struct uv__queue watchers;                                                  \
++  int wd;                                                                     \
++
++#define UV_STREAM_PRIVATE_PLATFORM_FIELDS                                     \
++  int need_drain;                                                             \
+ 
+ #endif /* UV_MVS_H */

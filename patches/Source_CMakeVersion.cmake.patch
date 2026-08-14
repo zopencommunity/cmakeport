@@ -1,0 +1,15 @@
+diff --git a/Source/CMakeVersion.cmake b/Source/CMakeVersion.cmake
+index 17f90a9b..b2b88757 100644
+--- a/Source/CMakeVersion.cmake
++++ b/Source/CMakeVersion.cmake
+@@ -83,5 +83,9 @@ else()
+   set(CMake_VERSION_SUFFIX "")
+ endif()
+ if(CMake_VERSION_IS_DIRTY)
+-  string(APPEND CMake_VERSION "-dirty")
++  if(CMAKE_SYSTEM_NAME STREQUAL "OS390")
++    string(APPEND CMake_VERSION "-zos")
++  else()
++    string(APPEND CMake_VERSION "-dirty")
++  endif()
+ endif()

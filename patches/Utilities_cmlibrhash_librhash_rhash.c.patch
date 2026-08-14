@@ -1,0 +1,13 @@
+diff --git a/Utilities/cmlibrhash/librhash/rhash.c b/Utilities/cmlibrhash/librhash/rhash.c
+index 4e60c213..847451c7 100644
+--- a/Utilities/cmlibrhash/librhash/rhash.c
++++ b/Utilities/cmlibrhash/librhash/rhash.c
+@@ -527,7 +527,7 @@ RHASH_API int rhash_file_update(rhash ctx, FILE* fd)
+ #ifdef _WIN32
+ # define FOPEN_MODE "rbS"
+ #else
+-# define FOPEN_MODE "rb"
++# define FOPEN_MODE "r"
+ #endif
+ 
+ RHASH_API int rhash_file(unsigned hash_id, const char* filepath, unsigned char* result)

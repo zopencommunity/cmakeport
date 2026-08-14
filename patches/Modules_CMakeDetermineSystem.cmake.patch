@@ -1,0 +1,13 @@
+diff --git a/Modules/CMakeDetermineSystem.cmake b/Modules/CMakeDetermineSystem.cmake
+index c70fea18..35a0a682 100644
+--- a/Modules/CMakeDetermineSystem.cmake
++++ b/Modules/CMakeDetermineSystem.cmake
+@@ -57,7 +57,7 @@ if(CMAKE_HOST_UNIX)
+         ERROR_QUIET
+         RESULT_VARIABLE _uname_result)
+     endif()
+-    if(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux|CYGWIN.*|MSYS.*|^GNU$|Android")
++    if(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux|CYGWIN.*|MSYS.*|^GNU$|Android|OS/390")
+       execute_process(COMMAND ${CMAKE_UNAME} -m
+         OUTPUT_VARIABLE CMAKE_HOST_SYSTEM_PROCESSOR
+         RESULT_VARIABLE val
