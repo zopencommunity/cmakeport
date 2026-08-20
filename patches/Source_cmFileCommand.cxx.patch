@@ -1,0 +1,13 @@
+diff --git a/Source/cmFileCommand.cxx b/Source/cmFileCommand.cxx
+index 366314c8..511fda77 100644
+--- a/Source/cmFileCommand.cxx
++++ b/Source/cmFileCommand.cxx
+@@ -462,7 +462,7 @@ bool HandleStringsCommand(std::vector<std::string> const& args,
+   }
+ 
+ // Open the specified file.
+-#if defined(_WIN32) || defined(__CYGWIN__)
++#if defined(_WIN32) || defined(__CYGWIN__) || defined(__MVS__)
+   cmsys::ifstream fin(fileName.c_str(), std::ios::in | std::ios::binary);
+ #else
+   cmsys::ifstream fin(fileName.c_str());

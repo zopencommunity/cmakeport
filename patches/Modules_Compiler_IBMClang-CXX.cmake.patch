@@ -1,0 +1,17 @@
+diff --git a/Modules/Compiler/IBMClang-CXX.cmake b/Modules/Compiler/IBMClang-CXX.cmake
+index 071eec8f..52f2107e 100644
+--- a/Modules/Compiler/IBMClang-CXX.cmake
++++ b/Modules/Compiler/IBMClang-CXX.cmake
+@@ -8,7 +8,11 @@ unset(_ibmclang_version_cxx)
+ 
+ __compiler_ibmclang(CXX)
+ 
+-__compiler_check_default_language_standard(CXX 17.1.0 17)
++if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
++  __compiler_check_default_language_standard(CXX 1.1.0 14)
++else()
++  __compiler_check_default_language_standard(CXX 17.1.0 17)
++endif()
+ 
+ set(CMAKE_CXX_COMPILE_OBJECT
+   "<CMAKE_CXX_COMPILER> -x c++ <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>")

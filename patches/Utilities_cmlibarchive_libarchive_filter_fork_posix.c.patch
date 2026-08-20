@@ -1,0 +1,13 @@
+diff --git a/Utilities/cmlibarchive/libarchive/filter_fork_posix.c b/Utilities/cmlibarchive/libarchive/filter_fork_posix.c
+index 7c485193..ba0c5b3d 100644
+--- a/Utilities/cmlibarchive/libarchive/filter_fork_posix.c
++++ b/Utilities/cmlibarchive/libarchive/filter_fork_posix.c
+@@ -28,7 +28,7 @@
+ 
+ /* This capability is only available on POSIX systems. */
+ #if defined(HAVE_PIPE) && defined(HAVE_FCNTL) && \
+-    (defined(HAVE_FORK) || defined(HAVE_VFORK) || defined(HAVE_POSIX_SPAWNP))
++    (defined(HAVE_FORK) || defined(HAVE_VFORK) || defined(HAVE_POSIX_SPAWNP)) || defined(__MVS__)
+ 
+ #if defined(HAVE_SYS_TYPES_H)
+ #  include <sys/types.h>

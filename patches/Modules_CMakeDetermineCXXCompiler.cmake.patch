@@ -1,0 +1,42 @@
+diff --git a/Modules/CMakeDetermineCXXCompiler.cmake b/Modules/CMakeDetermineCXXCompiler.cmake
+index 5c5d4412..40b85026 100644
+--- a/Modules/CMakeDetermineCXXCompiler.cmake
++++ b/Modules/CMakeDetermineCXXCompiler.cmake
+@@ -79,6 +79,12 @@ else()
+   set(CMAKE_CXX_COMPILER_ID_TEST_FLAGS
+     # Try compiling to an object file only.
+     "-c"
++
++    "-fzos-le-char-mode=ascii"
++    "-m32 -fzos-le-char-mode=ascii"
++    "-m64 -fzos-le-char-mode=ascii"
++    "-qascii"
++
+     # IAR does not detect language automatically
+     "--c++"
+     "--ec++"
+@@ -94,7 +100,13 @@ else()
+ endif()
+ 
+ if(CMAKE_CXX_COMPILER_TARGET)
+-  set(CMAKE_CXX_COMPILER_ID_TEST_FLAGS_FIRST "-c --target=${CMAKE_CXX_COMPILER_TARGET}")
++  if(CMAKE_SYSTEM_NAME MATCHES "OS390")
++    # z/OS object files sometimes don't have continuous string literals, therefore
++    # leads to some compiler info not being correctly parsed, so we should not use -c.
++    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "--target=${CMAKE_C_COMPILER_TARGET}")
++  else()
++    set(CMAKE_C_COMPILER_ID_TEST_FLAGS_FIRST "-c --target=${CMAKE_C_COMPILER_TARGET}")
++  endif()
+ endif()
+ 
+ # Build a small source file to identify the compiler.
+@@ -187,7 +199,8 @@ if (NOT _CMAKE_TOOLCHAIN_PREFIX)
+ 
+     # if "llvm-" is part of the prefix, remove it, since llvm doesn't have its own binutils
+     # but uses the regular ar, objcopy, etc. (instead of llvm-objcopy etc.)
+-    if ("${_CMAKE_TOOLCHAIN_PREFIX}" MATCHES "(.+-)?llvm-$")
++    # remove "ibm-" prefix for the same reason above.
++    if ("${_CMAKE_TOOLCHAIN_PREFIX}" MATCHES "(.+-)?(llvm|ibm)-$")
+       set(_CMAKE_TOOLCHAIN_PREFIX ${CMAKE_MATCH_1})
+     endif ()
+   elseif(CMAKE_CXX_COMPILER_ID MATCHES "TI")

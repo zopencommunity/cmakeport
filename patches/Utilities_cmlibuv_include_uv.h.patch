@@ -1,0 +1,43 @@
+diff --git a/Utilities/cmlibuv/include/uv.h b/Utilities/cmlibuv/include/uv.h
+index 8e45dae8..2abc5062 100644
+--- a/Utilities/cmlibuv/include/uv.h
++++ b/Utilities/cmlibuv/include/uv.h
+@@ -131,6 +131,7 @@ struct uv__queue {
+   XX(ENOTSOCK, "socket operation on non-socket")                              \
+   XX(ENOTSUP, "operation not supported on socket")                            \
+   XX(EOVERFLOW, "value too large for defined data type")                      \
++  XX(EOPNOTSUPP, "operation not supported on socket")                         \
+   XX(EPERM, "operation not permitted")                                        \
+   XX(EPIPE, "broken pipe")                                                    \
+   XX(EPROTO, "protocol error")                                                \
+@@ -398,6 +399,9 @@ typedef struct {
+   uv_timespec_t st_mtim;
+   uv_timespec_t st_ctim;
+   uv_timespec_t st_birthtim;
++#ifdef __MVS__
++  struct file_tag st_tag;
++#endif
+ } uv_stat_t;
+ 
+ 
+@@ -602,11 +606,6 @@ UV_EXTERN int uv_tcp_nodelay(uv_tcp_t* handle, int enable);
+ UV_EXTERN int uv_tcp_keepalive(uv_tcp_t* handle,
+                                int enable,
+                                unsigned int delay);
+-UV_EXTERN int uv_tcp_keepalive_ex(uv_tcp_t* handle,
+-                                  int on,
+-                                  unsigned int idle,
+-                                  unsigned int intvl,
+-                                  unsigned int cnt);
+ UV_EXTERN int uv_tcp_simultaneous_accepts(uv_tcp_t* handle, int enable);
+ 
+ enum uv_tcp_flags {
+@@ -1228,7 +1227,7 @@ struct uv_cpu_times_s {
+ };
+ 
+ struct uv_cpu_info_s {
+-  char* model;
++  const char* model;
+   int speed;
+   struct uv_cpu_times_s cpu_times;
+ };

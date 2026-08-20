@@ -1,0 +1,35 @@
+diff --git a/Source/cmGeneratorTarget.cxx b/Source/cmGeneratorTarget.cxx
+index 458e9616..fdc21a51 100644
+--- a/Source/cmGeneratorTarget.cxx
++++ b/Source/cmGeneratorTarget.cxx
+@@ -259,7 +259,8 @@ char const* cmGeneratorTarget::GetOutputTargetType(
+         switch (artifact) {
+           case cmStateEnums::RuntimeBinaryArtifact:
+             // A DLL shared library is treated as a runtime target.
+-            return "RUNTIME";
++            // On z/OS it's treated as library target.
++            return this->Makefile->IsOn("OS390") ? "LIBRARY" : "RUNTIME";
+           case cmStateEnums::ImportLibraryArtifact:
+             // A DLL import library is treated as an archive target.
+             return "ARCHIVE";
+@@ -2043,6 +2044,12 @@ bool cmGeneratorTarget::IsAIX() const
+   return this->Target->IsAIX();
+ }
+ 
++
++bool cmGeneratorTarget::IsZOS() const
++{
++  return this->Target->IsZOS();
++}
++
+ bool cmGeneratorTarget::IsApple() const
+ {
+   return this->Target->IsApple();
+@@ -5737,6 +5744,7 @@ bool cmGeneratorTarget::HasImportLibrary(std::string const& config) const
+           // import libraries.
+           this->GetManagedType(config) != ManagedType::Managed) ||
+     (this->IsAIX() && this->IsExecutableWithExports()) ||
++    (this->IsZOS() && this->IsExecutableWithExports()) ||
+     (this->Makefile->PlatformSupportsAppleTextStubs() &&
+      this->IsSharedLibraryWithExports() && generate_Stubs);
+ }

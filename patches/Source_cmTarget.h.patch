@@ -1,0 +1,13 @@
+diff --git a/Source/cmTarget.h b/Source/cmTarget.h
+index f32cf316..cd1f1510 100644
+--- a/Source/cmTarget.h
++++ b/Source/cmTarget.h
+@@ -231,6 +231,8 @@ public:
+ 
+   //! Return whether or not we are targeting AIX.
+   bool IsAIX() const;
++  //! Return whether or not we are targeting z/OS.
++  bool IsZOS() const;
+   //! Return whether or not we are targeting Apple.
+   bool IsApple() const;
+ 

@@ -1,0 +1,66 @@
+diff --git a/Source/cmInstallCommand.cxx b/Source/cmInstallCommand.cxx
+index 2ddf39a2..26c1297a 100644
+--- a/Source/cmInstallCommand.cxx
++++ b/Source/cmInstallCommand.cxx
+@@ -133,6 +133,8 @@ public:
+     cmInstallCommandArguments const* args) const;
+   std::string GetDestinationForType(cmInstallCommandArguments const* args,
+                                     std::string const& type) const;
++  std::string GetImportLibrarySuffix(
++    cmInstallCommandArguments const* args) const;
+ 
+   cmExecutionStatus& Status;
+   cmMakefile* Makefile;
+@@ -702,6 +704,9 @@ bool HandleTargetsMode(std::vector<std::string> const& args,
+     return true;
+   }
+ 
++  // Check whether this is a z/OS platform.
++  bool zos_platform = helper.GetImportLibrarySuffix(nullptr) == ".x";
++
+   for (std::string const& tgt : targetList) {
+ 
+     if (helper.Makefile->IsAlias(tgt)) {
+@@ -847,19 +852,28 @@ bool HandleTargetsMode(std::vector<std::string> const& args,
+               target, archiveArgs, true, helper.CaptureContext());
+             artifactsSpecified = true;
+           }
+-          if (!runtimeArgs.GetDestination().empty()) {
++          if (!runtimeArgs.GetDestination().empty() && !zos_platform) {
+             // The DLL uses the RUNTIME properties.
+             runtimeGenerator = CreateInstallTargetGenerator(
+               target, runtimeArgs, false, helper.CaptureContext());
+             artifactsSpecified = true;
+           }
+-          if (!archiveGenerator && !runtimeGenerator) {
++          if (!libraryArgs.GetDestination().empty() && zos_platform) {
++            // The DLL uses the LIBRARY properties.
++            libraryGenerator = CreateInstallTargetGenerator(
++              target, libraryArgs, true, helper.CaptureContext());
++            artifactsSpecified = true;
++          }
++          if (!archiveGenerator && !runtimeGenerator && !libraryGenerator) {
+             archiveGenerator = CreateInstallTargetGenerator(
+               target, archiveArgs, true, helper.CaptureContext(),
+               helper.GetArchiveDestination(nullptr));
+             runtimeGenerator = CreateInstallTargetGenerator(
+               target, runtimeArgs, false, helper.CaptureContext(),
+               helper.GetRuntimeDestination(nullptr));
++            libraryGenerator = CreateInstallTargetGenerator(
++              target, libraryArgs, true, helper.CaptureContext(),
++              helper.GetLibraryDestination(nullptr));
+           }
+           if (runtimeDependencySet && runtimeGenerator) {
+             runtimeDependencySet->AddLibrary(runtimeGenerator.get());
+@@ -2705,6 +2719,11 @@ std::string Helper::GetDestinationForType(
+   return cm::InstallDirs::GetDirectoryForType(this->Makefile, type);
+ }
+ 
++std::string Helper::GetImportLibrarySuffix(cmInstallCommandArguments const* args) const
++{
++  return this->Makefile->GetSafeDefinition("CMAKE_IMPORT_LIBRARY_SUFFIX");
++}
++
+ } // namespace
+ 
+ bool cmInstallCommand(std::vector<std::string> const& args,

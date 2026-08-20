@@ -1,0 +1,14 @@
+diff --git a/Source/cmGeneratorTarget.h b/Source/cmGeneratorTarget.h
+index 4503247a..bfbfc460 100644
+--- a/Source/cmGeneratorTarget.h
++++ b/Source/cmGeneratorTarget.h
+@@ -453,6 +453,9 @@ public:
+   /** Return whether or not we are targeting AIX. */
+   bool IsAIX() const;
+   /** Return whether or not we are targeting Apple. */
++  /** Return whether or not we are targeting z/OS. */
++  bool IsZOS() const;
++
+   bool IsApple() const;
+ 
+   /** Return whether or not the target is for a DLL platform.  */

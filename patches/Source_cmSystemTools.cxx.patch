@@ -1,0 +1,27 @@
+diff --git a/Source/cmSystemTools.cxx b/Source/cmSystemTools.cxx
+index 3e840107..5a400ce5 100644
+--- a/Source/cmSystemTools.cxx
++++ b/Source/cmSystemTools.cxx
+@@ -1,7 +1,7 @@
+ /* Distributed under the OSI-approved BSD 3-Clause License.  See accompanying
+    file LICENSE.rst or https://cmake.org/licensing for details.  */
+ 
+-#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__)
++#if !defined(_WIN32) && !defined(__sun) && !defined(__OpenBSD__) && !defined(__MVS__)
+ // POSIX APIs are needed
+ // NOLINTNEXTLINE(bugprone-reserved-identifier)
+ #  define _POSIX_C_SOURCE 200809L
+@@ -4274,6 +4274,13 @@ cm::string_view cmSystemTools::GetSystemName()
+       systemName = "BSDOS";
+     }
+ 
++    // fix for OS/390, remove the /
++    static const cmsys::RegularExpression os390Regex("OS.390");
++    cmsys::RegularExpressionMatch match390;
++    if (os390Regex.find(uts_name.sysname, match390)) {
++      systemName = "OS390";
++    }
++
+     return systemName;
+   }
+   return "";

@@ -1,0 +1,17 @@
+diff --git a/Utilities/cmlibuv/include/uv/errno.h b/Utilities/cmlibuv/include/uv/errno.h
+index ac00778c..a88f7417 100644
+--- a/Utilities/cmlibuv/include/uv/errno.h
++++ b/Utilities/cmlibuv/include/uv/errno.h
+@@ -302,6 +302,12 @@
+ # define UV__ENOTSUP (-4049)
+ #endif
+ 
++#if defined(EOPNOTSUPP) && !defined(_WIN32)
++# define UV__EOPNOTSUPP UV__ERR(EOPNOTSUPP)
++#else
++# define UV__EOPNOTSUPP (-1112)
++#endif
++
+ #if defined(EPERM) && !defined(_WIN32)
+ # define UV__EPERM UV__ERR(EPERM)
+ #else

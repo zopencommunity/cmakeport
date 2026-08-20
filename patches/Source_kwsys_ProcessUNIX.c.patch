@@ -1,0 +1,13 @@
+diff --git a/Source/kwsys/ProcessUNIX.c b/Source/kwsys/ProcessUNIX.c
+index 8c22b4e4..5148671d 100644
+--- a/Source/kwsys/ProcessUNIX.c
++++ b/Source/kwsys/ProcessUNIX.c
+@@ -2505,7 +2505,7 @@ static pid_t kwsysProcessFork(kwsysProcess* cp,
+   defined(__GNU__)
+ #  define KWSYSPE_PS_COMMAND "ps axo pid,ppid"
+ #  define KWSYSPE_PS_FORMAT "%d %d\n"
+-#elif defined(__sun) && (defined(__SVR4) || defined(__svr4__)) /* Solaris */
++#elif defined(__MVS__) || (defined(__sun) && (defined(__SVR4) || defined(__svr4__))) /* Solaris */
+ #  define KWSYSPE_PS_COMMAND "ps -e -o pid,ppid"
+ #  define KWSYSPE_PS_FORMAT "%d %d\n"
+ #elif defined(__hpux) || defined(__sun__) || defined(__sgi) ||                \

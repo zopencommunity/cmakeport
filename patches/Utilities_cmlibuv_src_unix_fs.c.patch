@@ -1,0 +1,278 @@
+diff --git a/Utilities/cmlibuv/src/unix/fs.c b/Utilities/cmlibuv/src/unix/fs.c
+index dea3a55c..72d6e2ce 100644
+--- a/Utilities/cmlibuv/src/unix/fs.c
++++ b/Utilities/cmlibuv/src/unix/fs.c
+@@ -83,6 +83,10 @@
+ # include <sys/statfs.h>
+ #endif
+ 
++#if defined(__MVS__)
++#include "zos-base.h"
++#endif
++
+ #if defined(_AIX) && _XOPEN_SOURCE <= 600
+ extern char *mkdtemp(char *template); /* See issue #740 on AIX < 7 */
+ #endif
+@@ -203,7 +207,7 @@ static ssize_t uv__fs_fdatasync(uv_fs_t* req) {
+ }
+ 
+ 
+-#if (defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= 101300)           \
++#if defined(__APPLE__)                                                        \
+     || defined(_AIX71)                                                        \
+     || defined(__DragonFly__)                                                 \
+     || defined(__FreeBSD__)                                                   \
+@@ -212,7 +216,8 @@ static ssize_t uv__fs_fdatasync(uv_fs_t* req) {
+     || defined(__OpenBSD__)                                                   \
+     || defined(__linux__)                                                     \
+     || defined(__sun)                                                         \
+-    || defined(__QNX__)
++    || defined(__QNX__)                                                       \
++    || defined(__MVS__)
+ static struct timespec uv__fs_to_timespec(double time) {
+   struct timespec ts;
+ 
+@@ -233,8 +238,28 @@ static struct timespec uv__fs_to_timespec(double time) {
+ #endif
+ 
+ 
++#if defined(__MVS__)
++static struct timeval uv__fs_to_timeval(double time) {
++  struct timeval tv;
++  if (uv__isinf(time))
++    // 0 is for char tv_usec_pad[4]
++    return (struct timeval){ .tv_sec = UTIME_NOW, .tv_usec = UTIME_NOW };
++  else if (uv__isnan(time))
++    return (struct timeval){ .tv_sec = UTIME_OMIT, .tv_usec = UTIME_OMIT };
++
++  tv.tv_sec  = time;
++  tv.tv_usec = (time - tv.tv_sec) * 1e6;
++  if (tv.tv_usec < 0) {
++    tv.tv_usec += 1e6;
++    tv.tv_sec -= 1;
++  }
++  return tv;
++}
++#endif
++
++
+ static ssize_t uv__fs_futime(uv_fs_t* req) {
+-#if (defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= 101300)           \
++#if defined(__APPLE__)                                                        \
+     || defined(_AIX71)                                                        \
+     || defined(__DragonFly__)                                                 \
+     || defined(__FreeBSD__)                                                   \
+@@ -249,49 +274,19 @@ static ssize_t uv__fs_futime(uv_fs_t* req) {
+   ts[1] = uv__fs_to_timespec(req->mtime);
+   return futimens(req->file, ts);
+ #elif defined(__MVS__)
+-  attrib_t atr;
+-  memset(&atr, 0, sizeof(atr));
+-  atr.att_mtimechg = 1;
+-  atr.att_atimechg = 1;
+-  atr.att_mtime = req->mtime;
+-  atr.att_atime = req->atime;
+-  return __fchattr(req->file, &atr, sizeof(atr));
++  struct timeval tv[2];
++  tv[0] = uv__fs_to_timeval(req->atime);
++  tv[1] = uv__fs_to_timeval(req->mtime);
++  return futimes(req->file, tv);
+ #else
+   errno = ENOSYS;
+   return -1;
+ #endif
+ }
+ 
+-#if defined(CMAKE_BOOTSTRAP) && defined(__sun) && defined(__i386)
+-#  define CMAKE_NO_MKDTEMP
+-#endif
+-
+-#if defined(CMAKE_NO_MKDTEMP)
+-static char* uv__mkdtemp_fallback(char *template) {
+-  if (!mktemp(template) || mkdir(template, 0700))
+-    return NULL;
+-  return template;
+-}
+-static char* (*uv__mkdtemp_f)(char*);
+-static void uv__mkdtemp_initonce(void) {
+-  uv__mkdtemp_f = (char* (*)(char*)) dlsym(RTLD_DEFAULT, "mkdtemp");
+-  dlerror(); /* Ignore/cleanup dlsym errors.  */
+-  if (uv__mkdtemp_f == NULL) {
+-    uv__mkdtemp_f = uv__mkdtemp_fallback;
+-  }
+-}
+-static char* uv__mkdtemp(char *template)
+-{
+-  static uv_once_t once = UV_ONCE_INIT;
+-  uv_once(&once, uv__mkdtemp_initonce);
+-  return uv__mkdtemp_f(template);
+-}
+-#else
+-#define uv__mkdtemp mkdtemp
+-#endif
+ 
+ static ssize_t uv__fs_mkdtemp(uv_fs_t* req) {
+-  return uv__mkdtemp((char*) req->path) ? 0 : -1;
++  return mkdtemp((char*) req->path) ? 0 : -1;
+ }
+ 
+ 
+@@ -792,11 +787,7 @@ static ssize_t uv__fs_readlink(uv_fs_t* req) {
+     return -1;
+   }
+ 
+-#if defined(__MVS__)
+-  len = os390_readlink(req->path, buf, maxlen);
+-#else
+   len = readlink(req->path, buf, maxlen);
+-#endif
+ 
+   if (len == -1) {
+     uv__free(buf);
+@@ -1069,12 +1060,11 @@ static ssize_t uv__fs_sendfile(uv_fs_t* req) {
+ 
+     off = req->off;
+     len = req->bufsml[0].len;
++    try_sendfile = 1;
+ 
+ #ifdef __linux__
+     r = uv__fs_try_copy_file_range(in_fd, &off, out_fd, len);
+     try_sendfile = (r == -1 && errno == ENOSYS);
+-#else
+-    try_sendfile = 1;
+ #endif
+ 
+     if (try_sendfile)
+@@ -1167,7 +1157,7 @@ static ssize_t uv__fs_sendfile(uv_fs_t* req) {
+ 
+ 
+ static ssize_t uv__fs_utime(uv_fs_t* req) {
+-#if (defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= 101300)           \
++#if defined(__APPLE__)                                                        \
+     || defined(_AIX71)                                                        \
+     || defined(__DragonFly__)                                                 \
+     || defined(__FreeBSD__)                                                   \
+@@ -1176,7 +1166,8 @@ static ssize_t uv__fs_utime(uv_fs_t* req) {
+     || defined(__OpenBSD__)                                                   \
+     || defined(__linux__)                                                     \
+     || defined(__sun)                                                         \
+-    || defined(__QNX__)
++    || defined(__QNX__)                                                       \
++    || defined(__MVS__)
+   struct timespec ts[2];
+   ts[0] = uv__fs_to_timespec(req->atime);
+   ts[1] = uv__fs_to_timespec(req->mtime);
+@@ -1186,14 +1177,6 @@ static ssize_t uv__fs_utime(uv_fs_t* req) {
+   buf.actime = req->atime;
+   buf.modtime = req->mtime;
+   return utime(req->path, &buf);
+-#elif defined(__MVS__)
+-  attrib_t atr;
+-  memset(&atr, 0, sizeof(atr));
+-  atr.att_mtimechg = 1;
+-  atr.att_atimechg = 1;
+-  atr.att_mtime = req->mtime;
+-  atr.att_atime = req->atime;
+-  return __lchattr((char*) req->path, &atr, sizeof(atr));
+ #else
+   errno = ENOSYS;
+   return -1;
+@@ -1202,7 +1185,7 @@ static ssize_t uv__fs_utime(uv_fs_t* req) {
+ 
+ 
+ static ssize_t uv__fs_lutime(uv_fs_t* req) {
+-#if (defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= 101300)           \
++#if defined(__APPLE__)                                                        \
+     || defined(_AIX71)                                                        \
+     || defined(__DragonFly__)                                                 \
+     || defined(__FreeBSD__)                                                   \
+@@ -1211,7 +1194,8 @@ static ssize_t uv__fs_lutime(uv_fs_t* req) {
+     || defined(__OpenBSD__)                                                   \
+     || defined(__linux__)                                                     \
+     || defined(__sun)                                                         \
+-    || defined(__QNX__)
++    || defined(__QNX__)                                                       \
++    || defined(__MVS__)
+   struct timespec ts[2];
+   ts[0] = uv__fs_to_timespec(req->atime);
+   ts[1] = uv__fs_to_timespec(req->mtime);
+@@ -1258,7 +1242,7 @@ static ssize_t uv__fs_copyfile(uv_fs_t* req) {
+   uv_file dstfd;
+   struct stat src_statsbuf;
+   struct stat dst_statsbuf;
+-#if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED < 101300
++#ifdef __MVS__
+   struct timeval times[2];
+ #else
+   struct timespec times[2];
+@@ -1344,26 +1328,24 @@ static ssize_t uv__fs_copyfile(uv_fs_t* req) {
+    * Change the timestamps of the destination file to match the source file.
+    */
+ #if defined(__APPLE__)
+-#  if MAC_OS_X_VERSION_MIN_REQUIRED < 101300
+-  times[0].tv_sec = src_statsbuf.st_atimespec.tv_sec;
+-  times[0].tv_usec = src_statsbuf.st_atimespec.tv_nsec / 1000;
+-  times[1].tv_sec = src_statsbuf.st_mtimespec.tv_sec;
+-  times[1].tv_usec = src_statsbuf.st_mtimespec.tv_nsec / 1000;
+-#  else
+   times[0] = src_statsbuf.st_atimespec;
+   times[1] = src_statsbuf.st_mtimespec;
+-#  endif
+ #elif defined(_AIX)
+   times[0].tv_sec = src_statsbuf.st_atime;
+   times[0].tv_nsec = src_statsbuf.st_atime_n;
+   times[1].tv_sec = src_statsbuf.st_mtime;
+   times[1].tv_nsec = src_statsbuf.st_mtime_n;
++#elif defined(__MVS__)
++  times[0].tv_sec = src_statsbuf.st_atime;
++  times[0].tv_usec = 0;
++  times[1].tv_sec = src_statsbuf.st_mtime;
++  times[1].tv_usec = 0;
+ #else
+   times[0] = src_statsbuf.st_atim;
+   times[1] = src_statsbuf.st_mtim;
+ #endif
+ 
+-#if defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED < 101300
++#if defined(__MVS__)
+   if (futimes(dstfd, times) == -1) {
+     err = UV__ERR(errno);
+     goto out;
+@@ -1381,10 +1363,7 @@ static ssize_t uv__fs_copyfile(uv_fs_t* req) {
+    * `cp -p` does not care about errors here, so we don't either. Reuse the
+    * `result` variable to silence a -Wunused-result warning.
+    */
+-#ifndef __clang_analyzer__ /* deadcode.DeadStores */
+-  result =
+-#endif
+-    fchown(dstfd, src_statsbuf.st_uid, src_statsbuf.st_gid);
++  result = fchown(dstfd, src_statsbuf.st_uid, src_statsbuf.st_gid);
+ 
+   if (fchmod(dstfd, src_statsbuf.st_mode) == -1) {
+     err = UV__ERR(errno);
+@@ -1426,6 +1405,14 @@ static ssize_t uv__fs_copyfile(uv_fs_t* req) {
+   }
+ #endif
+ 
++#if defined(__MVS__)
++  /* Copy the source tag to dest. */
++  __setfdccsid(
++    dstfd,
++    (src_statsbuf.st_tag.ft_txtflag << 16) | src_statsbuf.st_tag.ft_ccsid
++  );
++#endif
++
+   bytes_to_send = src_statsbuf.st_size;
+   in_offset = 0;
+   while (bytes_to_send != 0) {
+@@ -1556,6 +1543,10 @@ static void uv__to_stat(struct stat* src, uv_stat_t* dst) {
+   dst->st_flags = 0;
+   dst->st_gen = 0;
+ #endif
++
++#ifdef __MVS__
++  dst->st_tag = src->st_tag;
++#endif
+ }
+ 
+ 
