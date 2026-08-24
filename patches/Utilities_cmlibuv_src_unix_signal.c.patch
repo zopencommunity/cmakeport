@@ -1,0 +1,15 @@
+diff --git a/Utilities/cmlibuv/src/unix/signal.c b/Utilities/cmlibuv/src/unix/signal.c
+index 91fb1494..394f00c6 100644
+--- a/Utilities/cmlibuv/src/unix/signal.c
++++ b/Utilities/cmlibuv/src/unix/signal.c
+@@ -185,6 +185,10 @@ static void uv__signal_handler(int signum) {
+   int saved_errno;
+ 
+   saved_errno = errno;
++#ifdef __MVS__
++  /* This is required in case the signal was thrown from a non-ASCII env: */
++  __ae_thread_swapmode(__AE_ASCII_MODE);
++#endif
+   memset(&msg, 0, sizeof msg);
+ 
+   if (uv__signal_lock()) {
