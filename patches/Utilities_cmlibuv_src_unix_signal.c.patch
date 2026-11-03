@@ -1,8 +1,40 @@
 diff --git a/Utilities/cmlibuv/src/unix/signal.c b/Utilities/cmlibuv/src/unix/signal.c
-index 91fb1494..394f00c6 100644
+index 91fb1494..9b9c1306 100644
 --- a/Utilities/cmlibuv/src/unix/signal.c
 +++ b/Utilities/cmlibuv/src/unix/signal.c
-@@ -185,6 +185,10 @@ static void uv__signal_handler(int signum) {
+@@ -144,8 +144,15 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
+ 
+   /* to shut up valgrind */
+   sigemptyset(saved_sigmask);
++#ifdef __MVS__
++  /* On z/OS, pthread_sigmask may fail in certain contexts during process
++   * spawning. We handle this gracefully by continuing without signal blocking.
++   */
++  pthread_sigmask(SIG_SETMASK, &new_mask, saved_sigmask);
++#else
+   if (pthread_sigmask(SIG_SETMASK, &new_mask, saved_sigmask))
+     abort();
++#endif
+ 
+   if (uv__signal_lock())
+     abort();
+@@ -156,8 +163,15 @@ static void uv__signal_unlock_and_unblock(sigset_t* saved_sigmask) {
+   if (uv__signal_unlock())
+     abort();
+ 
++#ifdef __MVS__
++  /* On z/OS, pthread_sigmask may fail in certain contexts.
++   * We handle this gracefully by continuing.
++   */
++  pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL);
++#else
+   if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
+     abort();
++#endif
+ }
+ 
+ 
+@@ -185,6 +199,10 @@ static void uv__signal_handler(int signum) {
    int saved_errno;
  
    saved_errno = errno;
