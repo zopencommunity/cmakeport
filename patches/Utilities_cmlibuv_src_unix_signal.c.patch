@@ -1,8 +1,8 @@
 diff --git a/Utilities/cmlibuv/src/unix/signal.c b/Utilities/cmlibuv/src/unix/signal.c
-index 91fb1494..8a89ebd9 100644
+index 91fb1494..d240a98b 100644
 --- a/Utilities/cmlibuv/src/unix/signal.c
 +++ b/Utilities/cmlibuv/src/unix/signal.c
-@@ -136,7 +136,23 @@ static int uv__signal_unlock(void) {
+@@ -136,7 +136,28 @@ static int uv__signal_unlock(void) {
  }
  
  
@@ -20,6 +20,11 @@ index 91fb1494..8a89ebd9 100644
 + * from uv__signal_unlock_and_unblock() once the lock is released.
 + * Single slot: cmake's usage (SIGCHLD) never needs more. */
 +static volatile sig_atomic_t uv__signal_pending_signum;
++/* Whether the last acquisition actually consumed the pipe token. A
++ * failed lock read consumes nothing, so the matching unlock must not
++ * write an extra token back (repeated tolerated failures would fill
++ * the pipe and hang the blocking unlock write). */
++static int uv__signal_token_held;
 +#endif
 +
 +static void uv__signal_block_and_lock(sigset_t* saved_sigmask,
@@ -27,7 +32,7 @@ index 91fb1494..8a89ebd9 100644
    sigset_t new_mask;
  
    if (sigfillset(&new_mask))
-@@ -144,20 +160,90 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
+@@ -144,20 +165,109 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
  
    /* to shut up valgrind */
    sigemptyset(saved_sigmask);
@@ -58,7 +63,7 @@ index 91fb1494..8a89ebd9 100644
 +   * otherwise see an unlocked flag and block on the empty pipe.
 +   */
 +  uv__signal_lock_held = 1;
-+  (void) uv__signal_lock();
++  uv__signal_token_held = (uv__signal_lock() == 0);
 +#else
    if (uv__signal_lock())
      abort();
@@ -79,21 +84,40 @@ index 91fb1494..8a89ebd9 100644
 +  if (mask_saved) {
 +    int r;
 +    int tries;
-+    for (tries = 0; tries < 3; tries++) {
++    r = pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL);
++    for (tries = 0; r != 0 && tries < 2; tries++)
 +      r = pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL);
-+      if (r == 0)
-+        break;
++    if (r != 0) {
++      /* pthread_sigmask keeps failing. Fall back to sigprocmask():
++       * cmake drives signal handling from a single thread, so the
++       * process-wide mask is equivalent here. */
++      r = sigprocmask(SIG_SETMASK, saved_sigmask, NULL);
++    }
++    if (r != 0) {
++      /* Last resort: at least unblock SIGCHLD so child-exit
++       * notifications are not lost; other signals stay blocked,
++       * which is still preferable to hanging process waits. */
++      sigset_t chld;
++      sigemptyset(&chld);
++      sigaddset(&chld, SIGCHLD);
++      pthread_sigmask(SIG_UNBLOCK, &chld, NULL);
 +    }
 +  }
 +
 +  /* Return the pipe token *before* clearing the held flag, so a signal
 +   * arriving in between cannot see an unlocked flag and block on an
-+   * empty pipe. If returning the token fails, reinitialize the pipe so
-+   * the token is restored and the next lock attempt does not block
++   * empty pipe. Only return a token if acquisition consumed one: a
++   * failed lock read consumed nothing, and writing an extra token
++   * would eventually fill the pipe and hang the blocking unlock
++   * write. If returning the token fails, reinitialize the pipe so the
++   * token is restored and the next lock attempt does not block
 +   * forever (suppressing the error alone would replace the SIGABRT
 +   * with a hang). */
-+  if (uv__signal_unlock() != 0)
-+    uv__signal_global_reinit();
++  if (uv__signal_token_held) {
++    if (uv__signal_unlock() != 0)
++      uv__signal_global_reinit();
++    uv__signal_token_held = 0;
++  }
 +  uv__signal_lock_held = 0;
 +
 +  /* Re-deliver any signal that was recorded while the lock was held,
@@ -121,7 +145,7 @@ index 91fb1494..8a89ebd9 100644
  }
  
  
-@@ -185,6 +271,24 @@ static void uv__signal_handler(int signum) {
+@@ -185,6 +295,24 @@ static void uv__signal_handler(int signum) {
    int saved_errno;
  
    saved_errno = errno;
@@ -146,7 +170,7 @@ index 91fb1494..8a89ebd9 100644
    memset(&msg, 0, sizeof msg);
  
    if (uv__signal_lock()) {
-@@ -376,6 +480,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -376,6 +504,7 @@ static int uv__signal_start(uv_signal_t* handle,
                              int signum,
                              int oneshot) {
    sigset_t saved_sigmask;
@@ -154,7 +178,7 @@ index 91fb1494..8a89ebd9 100644
    int err;
    uv_signal_t* first_handle;
  
-@@ -403,7 +508,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -403,7 +532,7 @@ static int uv__signal_start(uv_signal_t* handle,
      uv__signal_stop(handle);
    }
  
@@ -163,7 +187,7 @@ index 91fb1494..8a89ebd9 100644
  
    /* If at this point there are no active signal watchers for this signum (in
     * any of the loops), it's time to try and register a handler for it here.
-@@ -415,7 +520,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -415,7 +544,7 @@ static int uv__signal_start(uv_signal_t* handle,
      err = uv__signal_register_handler(signum, oneshot);
      if (err) {
        /* Registering the signal handler failed. Must be an invalid signal. */
@@ -172,7 +196,7 @@ index 91fb1494..8a89ebd9 100644
        return err;
      }
    }
-@@ -426,7 +531,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -426,7 +555,7 @@ static int uv__signal_start(uv_signal_t* handle,
  
    RB_INSERT(uv__signal_tree_s, &uv__signal_tree, handle);
  
@@ -181,7 +205,7 @@ index 91fb1494..8a89ebd9 100644
  
    handle->signal_cb = signal_cb;
    uv__handle_start(handle);
-@@ -540,6 +645,7 @@ int uv_signal_stop(uv_signal_t* handle) {
+@@ -540,6 +669,7 @@ int uv_signal_stop(uv_signal_t* handle) {
  static void uv__signal_stop(uv_signal_t* handle) {
    uv_signal_t* removed_handle;
    sigset_t saved_sigmask;
@@ -189,7 +213,7 @@ index 91fb1494..8a89ebd9 100644
    uv_signal_t* first_handle;
    int rem_oneshot;
    int first_oneshot;
-@@ -549,7 +655,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
+@@ -549,7 +679,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
    if (handle->signum == 0)
      return;
  
@@ -198,7 +222,7 @@ index 91fb1494..8a89ebd9 100644
  
    removed_handle = RB_REMOVE(uv__signal_tree_s, &uv__signal_tree, handle);
    assert(removed_handle == handle);
-@@ -571,7 +677,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
+@@ -571,7 +701,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
      }
    }
  
