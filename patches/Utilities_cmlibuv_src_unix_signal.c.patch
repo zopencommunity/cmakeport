@@ -1,5 +1,5 @@
 diff --git a/Utilities/cmlibuv/src/unix/signal.c b/Utilities/cmlibuv/src/unix/signal.c
-index 91fb1494..80a23dff 100644
+index 91fb1494..8a89ebd9 100644
 --- a/Utilities/cmlibuv/src/unix/signal.c
 +++ b/Utilities/cmlibuv/src/unix/signal.c
 @@ -136,7 +136,23 @@ static int uv__signal_unlock(void) {
@@ -27,7 +27,7 @@ index 91fb1494..80a23dff 100644
    sigset_t new_mask;
  
    if (sigfillset(&new_mask))
-@@ -144,20 +160,86 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
+@@ -144,20 +160,90 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
  
    /* to shut up valgrind */
    sigemptyset(saved_sigmask);
@@ -67,18 +67,16 @@ index 91fb1494..80a23dff 100644
  
  
 -static void uv__signal_unlock_and_unblock(sigset_t* saved_sigmask) {
--  if (uv__signal_unlock())
--    abort();
 +static void uv__signal_unlock_and_unblock(sigset_t* saved_sigmask,
 +                                           int mask_saved) {
-+  /* Only restore the mask if a valid one was saved; restoring an empty
-+   * mask after a failed save would unblock previously blocked signals. */
-+  if (mask_saved) {
 +#ifdef __MVS__
-+    /* On z/OS, pthread_sigmask may fail in certain contexts. Retry the
-+     * restoration: leaving the full block mask installed (notably with
-+     * SIGCHLD blocked) would hang process execution.
-+     */
++  /* Only restore the mask if a valid one was saved; restoring an empty
++   * mask after a failed save would unblock previously blocked signals.
++   * On z/OS, pthread_sigmask may fail in certain contexts. Retry the
++   * restoration: leaving the full block mask installed (notably with
++   * SIGCHLD blocked) would hang process execution.
++   */
++  if (mask_saved) {
 +    int r;
 +    int tries;
 +    for (tries = 0; tries < 3; tries++) {
@@ -86,14 +84,8 @@ index 91fb1494..80a23dff 100644
 +      if (r == 0)
 +        break;
 +    }
-+#else
-+    if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
-+      abort();
-+#endif
 +  }
- 
--  if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
-+#ifdef __MVS__
++
 +  /* Return the pipe token *before* clearing the held flag, so a signal
 +   * arriving in between cannot see an unlocked flag and block on an
 +   * empty pipe. If returning the token fails, reinitialize the pipe so
@@ -112,13 +104,24 @@ index 91fb1494..80a23dff 100644
 +    raise(pending);
 +  }
 +#else
-+  if (uv__signal_unlock())
++  /* Preserve the original ordering: return the pipe token *before*
++   * unblocking signals. Unmasking first would let a pending signal run
++   * uv__signal_handler() while the pipe is still empty, deadlocking
++   * its blocking uv__signal_lock() on the thread that must unlock. */
+   if (uv__signal_unlock())
      abort();
+ 
+-  if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
+-    abort();
++  if (mask_saved) {
++    if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
++      abort();
++  }
 +#endif
  }
  
  
-@@ -185,6 +267,24 @@ static void uv__signal_handler(int signum) {
+@@ -185,6 +271,24 @@ static void uv__signal_handler(int signum) {
    int saved_errno;
  
    saved_errno = errno;
@@ -143,7 +146,7 @@ index 91fb1494..80a23dff 100644
    memset(&msg, 0, sizeof msg);
  
    if (uv__signal_lock()) {
-@@ -376,6 +476,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -376,6 +480,7 @@ static int uv__signal_start(uv_signal_t* handle,
                              int signum,
                              int oneshot) {
    sigset_t saved_sigmask;
@@ -151,7 +154,7 @@ index 91fb1494..80a23dff 100644
    int err;
    uv_signal_t* first_handle;
  
-@@ -403,7 +504,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -403,7 +508,7 @@ static int uv__signal_start(uv_signal_t* handle,
      uv__signal_stop(handle);
    }
  
@@ -160,7 +163,7 @@ index 91fb1494..80a23dff 100644
  
    /* If at this point there are no active signal watchers for this signum (in
     * any of the loops), it's time to try and register a handler for it here.
-@@ -415,7 +516,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -415,7 +520,7 @@ static int uv__signal_start(uv_signal_t* handle,
      err = uv__signal_register_handler(signum, oneshot);
      if (err) {
        /* Registering the signal handler failed. Must be an invalid signal. */
@@ -169,7 +172,7 @@ index 91fb1494..80a23dff 100644
        return err;
      }
    }
-@@ -426,7 +527,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -426,7 +531,7 @@ static int uv__signal_start(uv_signal_t* handle,
  
    RB_INSERT(uv__signal_tree_s, &uv__signal_tree, handle);
  
@@ -178,7 +181,7 @@ index 91fb1494..80a23dff 100644
  
    handle->signal_cb = signal_cb;
    uv__handle_start(handle);
-@@ -540,6 +641,7 @@ int uv_signal_stop(uv_signal_t* handle) {
+@@ -540,6 +645,7 @@ int uv_signal_stop(uv_signal_t* handle) {
  static void uv__signal_stop(uv_signal_t* handle) {
    uv_signal_t* removed_handle;
    sigset_t saved_sigmask;
@@ -186,7 +189,7 @@ index 91fb1494..80a23dff 100644
    uv_signal_t* first_handle;
    int rem_oneshot;
    int first_oneshot;
-@@ -549,7 +651,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
+@@ -549,7 +655,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
    if (handle->signum == 0)
      return;
  
@@ -195,7 +198,7 @@ index 91fb1494..80a23dff 100644
  
    removed_handle = RB_REMOVE(uv__signal_tree_s, &uv__signal_tree, handle);
    assert(removed_handle == handle);
-@@ -571,7 +673,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
+@@ -571,7 +677,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
      }
    }
  
