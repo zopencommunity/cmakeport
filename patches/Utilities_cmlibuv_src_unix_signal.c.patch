@@ -1,8 +1,8 @@
 diff --git a/Utilities/cmlibuv/src/unix/signal.c b/Utilities/cmlibuv/src/unix/signal.c
-index 91fb1494..89a6adfb 100644
+index 91fb1494..80a23dff 100644
 --- a/Utilities/cmlibuv/src/unix/signal.c
 +++ b/Utilities/cmlibuv/src/unix/signal.c
-@@ -136,7 +136,19 @@ static int uv__signal_unlock(void) {
+@@ -136,7 +136,23 @@ static int uv__signal_unlock(void) {
  }
  
  
@@ -16,6 +16,10 @@ index 91fb1494..89a6adfb 100644
 + * without it.
 + */
 +static volatile sig_atomic_t uv__signal_lock_held;
++/* Signum of a signal that arrived while the lock was held; re-delivered
++ * from uv__signal_unlock_and_unblock() once the lock is released.
++ * Single slot: cmake's usage (SIGCHLD) never needs more. */
++static volatile sig_atomic_t uv__signal_pending_signum;
 +#endif
 +
 +static void uv__signal_block_and_lock(sigset_t* saved_sigmask,
@@ -23,7 +27,7 @@ index 91fb1494..89a6adfb 100644
    sigset_t new_mask;
  
    if (sigfillset(&new_mask))
-@@ -144,20 +156,62 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
+@@ -144,20 +160,86 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
  
    /* to shut up valgrind */
    sigemptyset(saved_sigmask);
@@ -48,9 +52,13 @@ index 91fb1494..89a6adfb 100644
 +   * LE quirk that makes pthread_sigmask fail there). Treat the lock as
 +   * acquired instead of aborting; cmake uses this lock from a single
 +   * thread, so this is safe.
++   *
++   * Set the held flag *before* attempting acquisition: a signal arriving
++   * after the token is consumed but before the flag is updated would
++   * otherwise see an unlocked flag and block on the empty pipe.
 +   */
-+  (void) uv__signal_lock();
 +  uv__signal_lock_held = 1;
++  (void) uv__signal_lock();
 +#else
    if (uv__signal_lock())
      abort();
@@ -59,37 +67,58 @@ index 91fb1494..89a6adfb 100644
  
  
 -static void uv__signal_unlock_and_unblock(sigset_t* saved_sigmask) {
+-  if (uv__signal_unlock())
+-    abort();
 +static void uv__signal_unlock_and_unblock(sigset_t* saved_sigmask,
 +                                           int mask_saved) {
-+#ifdef __MVS__
-+  uv__signal_lock_held = 0;
-+  /* See the comment in uv__signal_block_and_lock(): tolerate z/OS lock
-+   * pipe failures so a failed write does not turn into a SIGABRT. */
-+  (void) uv__signal_unlock();
-+#else
-   if (uv__signal_unlock())
-     abort();
-+#endif
- 
--  if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
--    abort();
 +  /* Only restore the mask if a valid one was saved; restoring an empty
 +   * mask after a failed save would unblock previously blocked signals. */
 +  if (mask_saved) {
 +#ifdef __MVS__
-+    /* On z/OS, pthread_sigmask may fail in certain contexts.
-+     * We handle this gracefully by continuing.
++    /* On z/OS, pthread_sigmask may fail in certain contexts. Retry the
++     * restoration: leaving the full block mask installed (notably with
++     * SIGCHLD blocked) would hang process execution.
 +     */
-+    pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL);
++    int r;
++    int tries;
++    for (tries = 0; tries < 3; tries++) {
++      r = pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL);
++      if (r == 0)
++        break;
++    }
 +#else
 +    if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
 +      abort();
 +#endif
 +  }
+ 
+-  if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
++#ifdef __MVS__
++  /* Return the pipe token *before* clearing the held flag, so a signal
++   * arriving in between cannot see an unlocked flag and block on an
++   * empty pipe. If returning the token fails, reinitialize the pipe so
++   * the token is restored and the next lock attempt does not block
++   * forever (suppressing the error alone would replace the SIGABRT
++   * with a hang). */
++  if (uv__signal_unlock() != 0)
++    uv__signal_global_reinit();
++  uv__signal_lock_held = 0;
++
++  /* Re-deliver any signal that was recorded while the lock was held,
++   * now that the lock is released. */
++  if (uv__signal_pending_signum != 0) {
++    int pending = uv__signal_pending_signum;
++    uv__signal_pending_signum = 0;
++    raise(pending);
++  }
++#else
++  if (uv__signal_unlock())
+     abort();
++#endif
  }
  
  
-@@ -185,6 +239,20 @@ static void uv__signal_handler(int signum) {
+@@ -185,6 +267,24 @@ static void uv__signal_handler(int signum) {
    int saved_errno;
  
    saved_errno = errno;
@@ -100,9 +129,13 @@ index 91fb1494..89a6adfb 100644
 +  /* If the main flow holds the signal lock (possible because signal
 +   * blocking may have failed on z/OS), we cannot block waiting for the
 +   * pipe token (same thread => self-deadlock) and must not walk the
-+   * handle tree without the lock. Drop the signal instead.
++   * handle tree without the lock. Record the signal so it can be
++   * re-delivered after the lock is released instead of dropping it
++   * (losing the only child-exit notification could hang a process
++   * wait).
 +   */
 +  if (uv__signal_lock_held) {
++    uv__signal_pending_signum = signum;
 +    errno = saved_errno;
 +    return;
 +  }
@@ -110,7 +143,7 @@ index 91fb1494..89a6adfb 100644
    memset(&msg, 0, sizeof msg);
  
    if (uv__signal_lock()) {
-@@ -376,6 +444,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -376,6 +476,7 @@ static int uv__signal_start(uv_signal_t* handle,
                              int signum,
                              int oneshot) {
    sigset_t saved_sigmask;
@@ -118,7 +151,7 @@ index 91fb1494..89a6adfb 100644
    int err;
    uv_signal_t* first_handle;
  
-@@ -403,7 +472,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -403,7 +504,7 @@ static int uv__signal_start(uv_signal_t* handle,
      uv__signal_stop(handle);
    }
  
@@ -127,7 +160,7 @@ index 91fb1494..89a6adfb 100644
  
    /* If at this point there are no active signal watchers for this signum (in
     * any of the loops), it's time to try and register a handler for it here.
-@@ -415,7 +484,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -415,7 +516,7 @@ static int uv__signal_start(uv_signal_t* handle,
      err = uv__signal_register_handler(signum, oneshot);
      if (err) {
        /* Registering the signal handler failed. Must be an invalid signal. */
@@ -136,7 +169,7 @@ index 91fb1494..89a6adfb 100644
        return err;
      }
    }
-@@ -426,7 +495,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -426,7 +527,7 @@ static int uv__signal_start(uv_signal_t* handle,
  
    RB_INSERT(uv__signal_tree_s, &uv__signal_tree, handle);
  
@@ -145,7 +178,7 @@ index 91fb1494..89a6adfb 100644
  
    handle->signal_cb = signal_cb;
    uv__handle_start(handle);
-@@ -540,6 +609,7 @@ int uv_signal_stop(uv_signal_t* handle) {
+@@ -540,6 +641,7 @@ int uv_signal_stop(uv_signal_t* handle) {
  static void uv__signal_stop(uv_signal_t* handle) {
    uv_signal_t* removed_handle;
    sigset_t saved_sigmask;
@@ -153,7 +186,7 @@ index 91fb1494..89a6adfb 100644
    uv_signal_t* first_handle;
    int rem_oneshot;
    int first_oneshot;
-@@ -549,7 +619,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
+@@ -549,7 +651,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
    if (handle->signum == 0)
      return;
  
@@ -162,7 +195,7 @@ index 91fb1494..89a6adfb 100644
  
    removed_handle = RB_REMOVE(uv__signal_tree_s, &uv__signal_tree, handle);
    assert(removed_handle == handle);
-@@ -571,7 +641,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
+@@ -571,7 +673,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
      }
    }
  
