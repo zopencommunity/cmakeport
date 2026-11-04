@@ -1,8 +1,16 @@
 diff --git a/Utilities/cmlibuv/src/unix/signal.c b/Utilities/cmlibuv/src/unix/signal.c
-index 91fb1494..d240a98b 100644
+index 91fb1494..0f54c647 100644
 --- a/Utilities/cmlibuv/src/unix/signal.c
 +++ b/Utilities/cmlibuv/src/unix/signal.c
-@@ -136,7 +136,28 @@ static int uv__signal_unlock(void) {
+@@ -48,6 +48,7 @@ static int uv__signal_start(uv_signal_t* handle,
+ static int uv__signal_compare(uv_signal_t* w1, uv_signal_t* w2);
+ static void uv__signal_stop(uv_signal_t* handle);
+ static void uv__signal_unregister_handler(int signum);
++static void uv__signal_handler(int signum);
+ 
+ 
+ static uv_once_t uv__signal_global_init_guard = UV_ONCE_INIT;
+@@ -136,7 +137,28 @@ static int uv__signal_unlock(void) {
  }
  
  
@@ -32,7 +40,7 @@ index 91fb1494..d240a98b 100644
    sigset_t new_mask;
  
    if (sigfillset(&new_mask))
-@@ -144,20 +165,109 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
+@@ -144,20 +166,113 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
  
    /* to shut up valgrind */
    sigemptyset(saved_sigmask);
@@ -121,11 +129,15 @@ index 91fb1494..d240a98b 100644
 +  uv__signal_lock_held = 0;
 +
 +  /* Re-deliver any signal that was recorded while the lock was held,
-+   * now that the lock is released. */
++   * now that the lock is released. Dispatch internally rather than via
++   * raise(): one-shot watchers use SA_RESETHAND, so the disposition
++   * has already been reset to SIG_DFL and re-raising would invoke the
++   * default action instead of notifying libuv (discarding SIGCHLD, or
++   * terminating the process for signals like SIGUSR1). */
 +  if (uv__signal_pending_signum != 0) {
 +    int pending = uv__signal_pending_signum;
 +    uv__signal_pending_signum = 0;
-+    raise(pending);
++    uv__signal_handler(pending);
 +  }
 +#else
 +  /* Preserve the original ordering: return the pipe token *before*
@@ -145,7 +157,7 @@ index 91fb1494..d240a98b 100644
  }
  
  
-@@ -185,6 +295,24 @@ static void uv__signal_handler(int signum) {
+@@ -185,6 +300,37 @@ static void uv__signal_handler(int signum) {
    int saved_errno;
  
    saved_errno = errno;
@@ -160,17 +172,30 @@ index 91fb1494..d240a98b 100644
 +   * re-delivered after the lock is released instead of dropping it
 +   * (losing the only child-exit notification could hang a process
 +   * wait).
++   *
++   * Handshake against the unlocking thread: after storing the pending
++   * signum, re-check the flag. If it is still held, the unlocking
++   * thread is guaranteed to observe our store and dispatch the signal.
++   * If it was cleared in between, our store may have been missed by
++   * the unlocker's check, so reclaim the entry and deliver through the
++   * normal locked path below (the pipe token has already been
++   * returned). Volatile sig_atomic_t accesses are ordered by the
++   * compiler, and s390 is strongly ordered, so this is race-free.
 +   */
 +  if (uv__signal_lock_held) {
 +    uv__signal_pending_signum = signum;
-+    errno = saved_errno;
-+    return;
++    if (uv__signal_lock_held) {
++      errno = saved_errno;
++      return;
++    }
++    if (uv__signal_pending_signum == signum)
++      uv__signal_pending_signum = 0;
 +  }
 +#endif
    memset(&msg, 0, sizeof msg);
  
    if (uv__signal_lock()) {
-@@ -376,6 +504,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -376,6 +522,7 @@ static int uv__signal_start(uv_signal_t* handle,
                              int signum,
                              int oneshot) {
    sigset_t saved_sigmask;
@@ -178,7 +203,7 @@ index 91fb1494..d240a98b 100644
    int err;
    uv_signal_t* first_handle;
  
-@@ -403,7 +532,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -403,7 +550,7 @@ static int uv__signal_start(uv_signal_t* handle,
      uv__signal_stop(handle);
    }
  
@@ -187,7 +212,7 @@ index 91fb1494..d240a98b 100644
  
    /* If at this point there are no active signal watchers for this signum (in
     * any of the loops), it's time to try and register a handler for it here.
-@@ -415,7 +544,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -415,7 +562,7 @@ static int uv__signal_start(uv_signal_t* handle,
      err = uv__signal_register_handler(signum, oneshot);
      if (err) {
        /* Registering the signal handler failed. Must be an invalid signal. */
@@ -196,7 +221,7 @@ index 91fb1494..d240a98b 100644
        return err;
      }
    }
-@@ -426,7 +555,7 @@ static int uv__signal_start(uv_signal_t* handle,
+@@ -426,7 +573,7 @@ static int uv__signal_start(uv_signal_t* handle,
  
    RB_INSERT(uv__signal_tree_s, &uv__signal_tree, handle);
  
@@ -205,7 +230,7 @@ index 91fb1494..d240a98b 100644
  
    handle->signal_cb = signal_cb;
    uv__handle_start(handle);
-@@ -540,6 +669,7 @@ int uv_signal_stop(uv_signal_t* handle) {
+@@ -540,6 +687,7 @@ int uv_signal_stop(uv_signal_t* handle) {
  static void uv__signal_stop(uv_signal_t* handle) {
    uv_signal_t* removed_handle;
    sigset_t saved_sigmask;
@@ -213,7 +238,7 @@ index 91fb1494..d240a98b 100644
    uv_signal_t* first_handle;
    int rem_oneshot;
    int first_oneshot;
-@@ -549,7 +679,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
+@@ -549,7 +697,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
    if (handle->signum == 0)
      return;
  
@@ -222,7 +247,7 @@ index 91fb1494..d240a98b 100644
  
    removed_handle = RB_REMOVE(uv__signal_tree_s, &uv__signal_tree, handle);
    assert(removed_handle == handle);
-@@ -571,7 +701,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
+@@ -571,7 +719,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
      }
    }
  
