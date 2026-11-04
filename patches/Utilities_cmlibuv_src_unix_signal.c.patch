@@ -1,47 +1,173 @@
 diff --git a/Utilities/cmlibuv/src/unix/signal.c b/Utilities/cmlibuv/src/unix/signal.c
-index 91fb1494..9b9c1306 100644
+index 91fb1494..89a6adfb 100644
 --- a/Utilities/cmlibuv/src/unix/signal.c
 +++ b/Utilities/cmlibuv/src/unix/signal.c
-@@ -144,8 +144,15 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
+@@ -136,7 +136,19 @@ static int uv__signal_unlock(void) {
+ }
+ 
+ 
+-static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
++#ifdef __MVS__
++/* On z/OS, pthread_sigmask may fail in certain contexts during process
++ * spawning. When that happens we cannot keep the signal-blocking invariant,
++ * so we track whether the lock is (believed to be) held by the normal flow:
++ * uv__signal_handler() runs on the same thread and must never block waiting
++ * for the pipe lock (that would self-deadlock) nor walk the handle tree
++ * without it.
++ */
++static volatile sig_atomic_t uv__signal_lock_held;
++#endif
++
++static void uv__signal_block_and_lock(sigset_t* saved_sigmask,
++                                       int* mask_saved) {
+   sigset_t new_mask;
+ 
+   if (sigfillset(&new_mask))
+@@ -144,20 +156,62 @@ static void uv__signal_block_and_lock(sigset_t* saved_sigmask) {
  
    /* to shut up valgrind */
    sigemptyset(saved_sigmask);
++
 +#ifdef __MVS__
 +  /* On z/OS, pthread_sigmask may fail in certain contexts during process
-+   * spawning. We handle this gracefully by continuing without signal blocking.
++   * spawning. We handle this gracefully by continuing without signal
++   * blocking, but remember that no valid mask was saved so that we do not
++   * "restore" an empty mask (which would unblock previously blocked
++   * signals) in uv__signal_unlock_and_unblock().
 +   */
-+  pthread_sigmask(SIG_SETMASK, &new_mask, saved_sigmask);
++  *mask_saved = pthread_sigmask(SIG_SETMASK, &new_mask, saved_sigmask) == 0;
 +#else
    if (pthread_sigmask(SIG_SETMASK, &new_mask, saved_sigmask))
      abort();
++  *mask_saved = 1;
 +#endif
  
-   if (uv__signal_lock())
-     abort();
-@@ -156,8 +163,15 @@ static void uv__signal_unlock_and_unblock(sigset_t* saved_sigmask) {
-   if (uv__signal_unlock())
-     abort();
- 
 +#ifdef __MVS__
-+  /* On z/OS, pthread_sigmask may fail in certain contexts.
-+   * We handle this gracefully by continuing.
++  /* On z/OS, read() on the signal lock pipe can intermittently fail with
++   * an errno other than EINTR in signal/spawn contexts (the same class of
++   * LE quirk that makes pthread_sigmask fail there). Treat the lock as
++   * acquired instead of aborting; cmake uses this lock from a single
++   * thread, so this is safe.
 +   */
-+  pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL);
++  (void) uv__signal_lock();
++  uv__signal_lock_held = 1;
 +#else
-   if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
+   if (uv__signal_lock())
      abort();
 +#endif
  }
  
  
-@@ -185,6 +199,10 @@ static void uv__signal_handler(int signum) {
+-static void uv__signal_unlock_and_unblock(sigset_t* saved_sigmask) {
++static void uv__signal_unlock_and_unblock(sigset_t* saved_sigmask,
++                                           int mask_saved) {
++#ifdef __MVS__
++  uv__signal_lock_held = 0;
++  /* See the comment in uv__signal_block_and_lock(): tolerate z/OS lock
++   * pipe failures so a failed write does not turn into a SIGABRT. */
++  (void) uv__signal_unlock();
++#else
+   if (uv__signal_unlock())
+     abort();
++#endif
+ 
+-  if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
+-    abort();
++  /* Only restore the mask if a valid one was saved; restoring an empty
++   * mask after a failed save would unblock previously blocked signals. */
++  if (mask_saved) {
++#ifdef __MVS__
++    /* On z/OS, pthread_sigmask may fail in certain contexts.
++     * We handle this gracefully by continuing.
++     */
++    pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL);
++#else
++    if (pthread_sigmask(SIG_SETMASK, saved_sigmask, NULL))
++      abort();
++#endif
++  }
+ }
+ 
+ 
+@@ -185,6 +239,20 @@ static void uv__signal_handler(int signum) {
    int saved_errno;
  
    saved_errno = errno;
 +#ifdef __MVS__
 +  /* This is required in case the signal was thrown from a non-ASCII env: */
 +  __ae_thread_swapmode(__AE_ASCII_MODE);
++
++  /* If the main flow holds the signal lock (possible because signal
++   * blocking may have failed on z/OS), we cannot block waiting for the
++   * pipe token (same thread => self-deadlock) and must not walk the
++   * handle tree without the lock. Drop the signal instead.
++   */
++  if (uv__signal_lock_held) {
++    errno = saved_errno;
++    return;
++  }
 +#endif
    memset(&msg, 0, sizeof msg);
  
    if (uv__signal_lock()) {
+@@ -376,6 +444,7 @@ static int uv__signal_start(uv_signal_t* handle,
+                             int signum,
+                             int oneshot) {
+   sigset_t saved_sigmask;
++  int mask_saved;
+   int err;
+   uv_signal_t* first_handle;
+ 
+@@ -403,7 +472,7 @@ static int uv__signal_start(uv_signal_t* handle,
+     uv__signal_stop(handle);
+   }
+ 
+-  uv__signal_block_and_lock(&saved_sigmask);
++  uv__signal_block_and_lock(&saved_sigmask, &mask_saved);
+ 
+   /* If at this point there are no active signal watchers for this signum (in
+    * any of the loops), it's time to try and register a handler for it here.
+@@ -415,7 +484,7 @@ static int uv__signal_start(uv_signal_t* handle,
+     err = uv__signal_register_handler(signum, oneshot);
+     if (err) {
+       /* Registering the signal handler failed. Must be an invalid signal. */
+-      uv__signal_unlock_and_unblock(&saved_sigmask);
++      uv__signal_unlock_and_unblock(&saved_sigmask, mask_saved);
+       return err;
+     }
+   }
+@@ -426,7 +495,7 @@ static int uv__signal_start(uv_signal_t* handle,
+ 
+   RB_INSERT(uv__signal_tree_s, &uv__signal_tree, handle);
+ 
+-  uv__signal_unlock_and_unblock(&saved_sigmask);
++  uv__signal_unlock_and_unblock(&saved_sigmask, mask_saved);
+ 
+   handle->signal_cb = signal_cb;
+   uv__handle_start(handle);
+@@ -540,6 +609,7 @@ int uv_signal_stop(uv_signal_t* handle) {
+ static void uv__signal_stop(uv_signal_t* handle) {
+   uv_signal_t* removed_handle;
+   sigset_t saved_sigmask;
++  int mask_saved;
+   uv_signal_t* first_handle;
+   int rem_oneshot;
+   int first_oneshot;
+@@ -549,7 +619,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
+   if (handle->signum == 0)
+     return;
+ 
+-  uv__signal_block_and_lock(&saved_sigmask);
++  uv__signal_block_and_lock(&saved_sigmask, &mask_saved);
+ 
+   removed_handle = RB_REMOVE(uv__signal_tree_s, &uv__signal_tree, handle);
+   assert(removed_handle == handle);
+@@ -571,7 +641,7 @@ static void uv__signal_stop(uv_signal_t* handle) {
+     }
+   }
+ 
+-  uv__signal_unlock_and_unblock(&saved_sigmask);
++  uv__signal_unlock_and_unblock(&saved_sigmask, mask_saved);
+ 
+   handle->signum = 0;
+   uv__handle_stop(handle);
