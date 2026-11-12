@@ -2,23 +2,20 @@ diff --git a/Modules/CMakeDetermineCompilerABI.cmake b/Modules/CMakeDetermineCom
 index 230eec8b..ef377b27 100644
 --- a/Modules/CMakeDetermineCompilerABI.cmake
 +++ b/Modules/CMakeDetermineCompilerABI.cmake
-@@ -71,6 +71,21 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
+@@ -71,6 +71,18 @@ function(CMAKE_DETERMINE_COMPILER_ABI lang src)
      if(DEFINED CMAKE_${lang}_VERBOSE_LINK_FLAG)
        list(APPEND LINK_OPTIONS "${CMAKE_${lang}_VERBOSE_LINK_FLAG}")
      endif()
-+    # Add Flag for z/OS compilers for ascii encoding of string literals.
++    # Add flag for z/OS compilers for ascii encoding of string literals.
 +    if(CMAKE_SYSTEM_NAME MATCHES "OS390")
 +      if(CMAKE_${lang}_COMPILER_ID MATCHES "Clang")
-+        get_filename_component(COMPILER_BASENAME "${CMAKE_${lang}_COMPILER}" NAME)
-+        if(COMPILER_BASENAME STREQUAL "ibm-clang" OR COMPILER_BASENAME STREQUAL "ibm-clang++")
-+          string(APPEND COMPILE_DEFINITIONS " -m32 -fzos-le-char-mode=ascii")
-+          list(APPEND LINK_OPTIONS " -m32")
-+        else()
-+          string(APPEND COMPILE_DEFINITIONS " -fzos-le-char-mode=ascii")
-+        endif()
++        # Change literal encoding only with -fexec-charset. Using -fzos-le-char-mode
++        # to set the Language Environment mode also affects ABI and is incompatible
++        # with the default -m32n ABI.
++        list(APPEND COMPILE_DEFINITIONS "-fexec-charset=UTF-8")
 +      elseif(CMAKE_${lang}_COMPILER_ID MATCHES "zOS")
-+        string(APPEND COMPILE_DEFINITIONS " -qascii")
-+        list(APPEND LINK_OPTIONS " -qascii")
++        list(APPEND COMPILE_DEFINITIONS "-qascii")
++        list(APPEND LINK_OPTIONS "-qascii")
 +      endif()
 +    endif()
      if(lang MATCHES "^(CUDA|HIP)$")
