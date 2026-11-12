@@ -6,9 +6,9 @@ index 9723fb6b..2a815eb9 100644
      # Try compiling to an object file only.
      "-c"
  
-+    "-fzos-le-char-mode=ascii"
-+    "-m32 -fzos-le-char-mode=ascii"
-+    "-m64 -fzos-le-char-mode=ascii"
++    # z/OS: encode identification literals without changing ABI or Language
++    # Environment char mode.
++    "-fexec-charset=UTF-8"
 +    "-qascii"
 +
      # Try enabling ANSI mode on HP.
